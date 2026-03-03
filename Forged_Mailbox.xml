@@ -4,13 +4,6 @@
   xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\FrameXML\UI.xsd"
 >
-  <Script file="localization.lua" />
-  <Script file="localization.fr.lua" />
-  <Script file="localization.de.lua" />
-  <Script file="localization.es.lua" />
-  <Script file="localization.ru.lua" />
-  <Script file="Calendar.lua" />
-  <Script file="Forged_Mailbox.lua" />
   <Button name="Forged_MailboxAutoCompleteButtonTemplate" virtual="true">
     <Size>
       <AbsDimension x="120" y="14" />
@@ -297,85 +290,6 @@
     hidden="true"
     inherits="Forged_MailboxReturnedArrowTemplate"
   />
-  <Frame name="Forged_MailboxAuctionTemplate" virtual="true" hidden="true">
-    <Size>
-      <AbsDimension x="32" y="32" />
-    </Size>
-    <Anchors>
-      <Anchor point="TOPRIGHT" relativePoint="BOTTOMRIGHT">
-        <Offset>
-          <AbsDimension x="4" y="8" />
-        </Offset>
-      </Anchor>
-    </Anchors>
-    <Layers>
-      <Layer level="BACKGROUND">
-        <Texture name="$parentTexture" file="Interface\Addons\Forged_Mailbox\assets\AH.blp">
-          <Size>
-            <AbsDimension x="28" y="28" />
-          </Size>
-          <Anchors>
-            <Anchor point="CENTER">
-              <Offset>
-                <AbsDimension x="-4" y="0" />
-              </Offset>
-            </Anchor>
-          </Anchors>
-        </Texture>
-      </Layer>
-    </Layers>
-    <Scripts>
-      <OnEnter>
-				GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-				GameTooltip:SetText( L[ "This mail was sent by an auctionhouse." ] );
-			</OnEnter>
-      <OnLeave>
-				GameTooltip:Hide();
-			</OnLeave>
-    </Scripts>
-  </Frame>
-  <Frame
-    name="Forged_MailboxAuctionIcon1"
-    parent="MailItem1ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
-  <Frame
-    name="Forged_MailboxAuctionIcon2"
-    parent="MailItem2ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
-  <Frame
-    name="Forged_MailboxAuctionIcon3"
-    parent="MailItem3ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
-  <Frame
-    name="Forged_MailboxAuctionIcon4"
-    parent="MailItem4ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
-  <Frame
-    name="Forged_MailboxAuctionIcon5"
-    parent="MailItem5ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
-  <Frame
-    name="Forged_MailboxAuctionIcon6"
-    parent="MailItem6ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
-  <Frame
-    name="Forged_MailboxAuctionIcon7"
-    parent="MailItem7ExpireTime"
-    hidden="true"
-    inherits="Forged_MailboxAuctionTemplate"
-  />
   <CheckButton
     name="SendMailCODAllButton"
     parent="SendMailFrame"
@@ -484,12 +398,138 @@
         </FontString>
         <FontString name="$parentParticipant" inherits="GameFontNormal">
           <Size>
-            <AbsDimension x="100" y="14" />
+            <AbsDimension x="170" y="14" />
           </Size>
           <Anchors>
             <Anchor point="TOPRIGHT">
               <Offset>
                 <AbsDimension x="-2" y="-15" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentSubject" inherits="GameFontNormal">
+          <Size>
+            <AbsDimension x="270" y="14" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="30" y="-1" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Frame name="$parentIcon">
+        <Size>
+          <AbsDimension x="28" y="28" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="1" y="-1" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <Texture name="$parentTexture" file="Interface/Icons/INV_Scroll_01">
+              <Size>
+                <AbsDimension x="28" y="28" />
+              </Size>
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="0" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </Texture>
+          </Layer>
+        </Layers>
+      </Frame>
+    </Frames>
+  </Frame>
+  <Frame name="Forged_MailboxLedgerItemTemplate" virtual="true" hidden="true">
+    <Size>
+      <AbsDimension x="100" y="30" />
+    </Size>
+    <Anchors>
+      <Anchor point="TOPLEFT">
+        <Offset>
+          <AbsDimension x="0" y="0" />
+        </Offset>
+      </Anchor>
+      <Anchor point="RIGHT">
+        <Offset>
+          <AbsDimension x="0" y="0" />
+        </Offset>
+      </Anchor>
+    </Anchors>
+    <Layers>
+      <Layer level="ARTWORK">
+        <Texture name="$parentBackground" file="Interface/Buttons/WHITE8x8">
+          <Size>
+            <AbsDimension x="10" y="1" />
+          </Size>
+          <Anchors>
+            <Anchor point="BOTTOMLEFT">
+              <Offset>
+                <AbsDimension x="0" y="-1" />
+              </Offset>
+            </Anchor>
+            <Anchor point="RIGHT" />
+          </Anchors>
+        </Texture>
+        <Texture name="$parentStatus">
+          <Size>
+            <AbsDimension x="28" y="28" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOPRIGHT">
+              <Offset>
+                <AbsDimension x="4" y="-10" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </Texture>
+      </Layer>
+      <Layer level="ARTWORK">
+        <FontString name="$parentTimeStamp" inherits="GameFontNormal">
+          <Size>
+            <AbsDimension x="160" y="14" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="34" y="-1" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentMoney" inherits="GameFontNormal">
+          <Size>
+            <AbsDimension x="70" y="14" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="34" y="-14" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentParticipant" inherits="GameFontNormal">
+          <Size>
+            <AbsDimension x="100" y="14" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOPRIGHT">
+              <Offset>
+                <AbsDimension x="-4" y="-7" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -1006,15 +1046,502 @@
       </Button>
     </Frames>
   </Frame>
+  <Frame name="Forged_MailboxLedgerFrame" parent="MailFrame" hidden="true">
+    <Size>
+      <AbsDimension x="384" y="512" />
+    </Size>
+    <Anchors>
+      <Anchor point="TOPLEFT" />
+    </Anchors>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <FontString name="Forged_MailboxLedgerTitleText" inherits="GameFontNormal">
+          <Size>
+            <AbsDimension x="224" y="14" />
+          </Size>
+          <Anchors>
+            <Anchor point="CENTER">
+              <Offset>
+                <AbsDimension x="6" y="230" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="Forged_MailboxLedgerStatusText" inherits="GameFontNormal">
+          <Size>
+            <AbsDimension x="150" y="14" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="27" y="-414" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Button name="Forged_MailboxLedgerFiltersButton" inherits="UIPanelButtonTemplate" text="Filters">
+        <Size>
+          <AbsDimension x="70" y="22" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="75" y="-70" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            Forged_Mailbox.ledger.filter_dropdown()
+          </OnClick>
+        </Scripts>
+        <Layers>
+          <Layer level="ARTWORK">
+            <Texture
+              name="$parentArrow"
+              file="Interface\Addons\Forged_Mailbox\assets\DownArrow.tga"
+            >
+              <Size>
+                <AbsDimension x="12" y="12" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT">
+                  <Offset>
+                    <AbsDimension x="-8" y="-1" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </Texture>
+          </Layer>
+        </Layers>
+      </Button>
+      <Button name="Forged_MailboxLedgerStartTime">
+        <Size>
+          <AbsDimension x="80" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="127" y="-45" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="BACKGROUND">
+            <FontString name="$parentTitle" inherits="GameFontNormal" text="Period">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="-50" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <FontString name="$parentText" inherits="GameFontNormal" text="13.12.2025">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="0" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <Texture name="$parentLeft" file="Interface\Common\Common-Input-Border">
+              <Size>
+                <AbsDimension x="8" y="20" />
+              </Size>
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="-8" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+              <TexCoords left="0" right="0.0625" top="0" bottom="0.625" />
+            </Texture>
+            <Texture name="$parentMiddle" file="Interface\Common\Common-Input-Border">
+              <Size>
+                <AbsDimension x="88" y="20" />
+              </Size>
+              <Anchors>
+                <Anchor point="LEFT" relativeTo="$parentLeft" relativePoint="RIGHT" />
+              </Anchors>
+              <TexCoords left="0.0625" right="0.9375" top="0" bottom="0.625" />
+            </Texture>
+            <Texture name="$parentRight" file="Interface\Common\Common-Input-Border">
+              <Size>
+                <AbsDimension x="8" y="20" />
+              </Size>
+              <Anchors>
+                <Anchor point="LEFT" relativeTo="$parentMiddle" relativePoint="RIGHT" />
+              </Anchors>
+              <TexCoords left="0.9375" right="1.0" top="0" bottom="0.625" />
+            </Texture>
+          </Layer>
+        </Layers>
+        <Frames>
+          <Button name="$parentButton">
+            <Size>
+              <AbsDimension x="24" y="24" />
+            </Size>
+            <Anchors>
+              <Anchor point="LEFT" relativeTo="$parent" relativePoint="RIGHT">
+                <Offset>
+                  <AbsDimension x="-5" y="0" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                Forged_Mailbox.ledger.show_calendar( "Start" )
+              </OnClick>
+            </Scripts>
+            <NormalTexture
+              name="$parentNormalTexture"
+              file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Up"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </NormalTexture>
+            <PushedTexture
+              name="$parentPushedTexture"
+              file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Down"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </PushedTexture>
+            <DisabledTexture
+              name="$parentDisabledTexture"
+              file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Disabled"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </DisabledTexture>
+            <HighlightTexture
+              name="$parentHighlightTexture"
+              file="Interface\Buttons\UI-Common-MouseHilight"
+              alphaMode="ADD"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </HighlightTexture>
+          </Button>
+        </Frames>
+      </Button>
+      <Button name="Forged_MailboxLedgerEndTime">
+        <Size>
+          <AbsDimension x="80" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="245" y="-45" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="BACKGROUND">
+            <FontString name="$parentTitle" inherits="GameFontNormal" text="-">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="-17" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <FontString name="$parentText" inherits="GameFontNormal" text="13.12.2025">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="0" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <Texture name="$parentLeft" file="Interface\Common\Common-Input-Border">
+              <Size>
+                <AbsDimension x="8" y="20" />
+              </Size>
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="-8" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+              <TexCoords left="0" right="0.0625" top="0" bottom="0.625" />
+            </Texture>
+            <Texture name="$parentMiddle" file="Interface\Common\Common-Input-Border">
+              <Size>
+                <AbsDimension x="88" y="20" />
+              </Size>
+              <Anchors>
+                <Anchor point="LEFT" relativeTo="$parentLeft" relativePoint="RIGHT" />
+              </Anchors>
+              <TexCoords left="0.0625" right="0.9375" top="0" bottom="0.625" />
+            </Texture>
+            <Texture name="$parentRight" file="Interface\Common\Common-Input-Border">
+              <Size>
+                <AbsDimension x="8" y="20" />
+              </Size>
+              <Anchors>
+                <Anchor point="LEFT" relativeTo="$parentMiddle" relativePoint="RIGHT" />
+              </Anchors>
+              <TexCoords left="0.9375" right="1.0" top="0" bottom="0.625" />
+            </Texture>
+          </Layer>
+        </Layers>
+        <Frames>
+          <Button name="$parentButton">
+            <Size>
+              <AbsDimension x="24" y="24" />
+            </Size>
+            <Anchors>
+              <Anchor point="LEFT" relativeTo="$parent" relativePoint="RIGHT">
+                <Offset>
+                  <AbsDimension x="-5" y="0" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                Forged_Mailbox.ledger.show_calendar( "End" )
+              </OnClick>
+            </Scripts>
+            <NormalTexture
+              name="$parentNormalTexture"
+              file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Up"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </NormalTexture>
+            <PushedTexture
+              name="$parentPushedTexture"
+              file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Down"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </PushedTexture>
+            <DisabledTexture
+              name="$parentDisabledTexture"
+              file="Interface\ChatFrame\UI-ChatIcon-ScrollDown-Disabled"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </DisabledTexture>
+            <HighlightTexture
+              name="$parentHighlightTexture"
+              file="Interface\Buttons\UI-Common-MouseHilight"
+              alphaMode="ADD"
+            >
+              <Size>
+                <AbsDimension x="24" y="24" />
+              </Size>
+              <Anchors>
+                <Anchor point="RIGHT" />
+              </Anchors>
+            </HighlightTexture>
+          </Button>
+        </Frames>
+      </Button>
+      <Frame
+        name="Forged_MailboxLedgerPlayersDropDown"
+        inherits="UIDropDownMenuTemplate"
+        enableMouse="true"
+      >
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="231" y="-75" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnLoad>
+            Forged_Mailbox.ledger.players_dropdown_on_load()
+          </OnLoad>
+          <OnShow>
+            Forged_Mailbox.ledger.players_dropdown_on_load()
+          </OnShow>
+        </Scripts>
+      </Frame>
+      <ScrollFrame name="Forged_MailboxLedgerScrollFrame" inherits="UIPanelScrollFrameTemplate">
+        <Size>
+          <AbsDimension x="296" y="312" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="23" y="-98" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </ScrollFrame>
+      <Frame name="Forged_MailboxLedgerEntriesFrame" enableMouse="true">
+        <Size>
+          <AbsDimension x="301" y="255" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="23" y="-98" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Frames>
+          <Frame
+            name="Forged_MailboxLedgerItem1"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem2"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem3"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem4"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem5"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem6"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem7"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem8"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem9"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+          <Frame
+            name="Forged_MailboxLedgerItem10"
+            parent="Forged_MailboxLedgerEntriesFrame"
+            inherits="Forged_MailboxLedgerItemTemplate"
+          />
+        </Frames>
+      </Frame>
+      <Button name="Forged_MailboxLedgerSentButton" inherits="UIPanelButtonTemplate" text="Sent">
+        <Size>
+          <AbsDimension x="80" y="22" />
+        </Size>
+        <Anchors>
+          <Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT">
+            <Offset>
+              <AbsDimension x="-39" y="80" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            Forged_Mailbox.ledger.populate( "Sent" )
+          </OnClick>
+        </Scripts>
+      </Button>
+      <Button
+        name="Forged_MailboxLedgerReceivedButton"
+        inherits="UIPanelButtonTemplate"
+        text="Received"
+      >
+        <Size>
+          <AbsDimension x="80" y="22" />
+        </Size>
+        <Anchors>
+          <Anchor point="RIGHT" relativeTo="SendMailCancelButton" relativePoint="LEFT">
+            <Offset>
+              <AbsDimension x="0" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            Forged_Mailbox.ledger.populate( "Received" )
+          </OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+  </Frame>
   <Button
     name="MailFrameTab3"
     inherits="FriendsFrameTabTemplate"
     id="3"
     parent="MailFrame"
-    text="Log"
+    text="Ledger"
   >
     <Anchors>
       <Anchor point="LEFT" relativeTo="MailFrameTab2" relativePoint="RIGHT">
+        <Offset>
+          <AbsDimension x="-8" y="0" />
+        </Offset>
+      </Anchor>
+    </Anchors>
+    <Scripts>
+      <OnClick>
+				MailFrameTab_OnClick()
+			</OnClick>
+    </Scripts>
+  </Button>
+  <Button
+    name="MailFrameTab4"
+    inherits="FriendsFrameTabTemplate"
+    id="4"
+    parent="MailFrame"
+    text="Log"
+  >
+    <Anchors>
+      <Anchor point="LEFT" relativeTo="MailFrameTab3" relativePoint="RIGHT">
         <Offset>
           <AbsDimension x="-8" y="0" />
         </Offset>

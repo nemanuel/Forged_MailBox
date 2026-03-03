@@ -1,7 +1,11 @@
 Forged_Mailbox = Forged_Mailbox or {}
 local m = Forged_Mailbox
 
-if m.Calendar then return end
+if m.date_picker then return end
+if m.Calendar then
+  m.date_picker = m.Calendar
+  return
+end
 
 ---@class Calendar
 ---@field show fun( data: table, date: number, anchor: table, on_select: function )
@@ -18,6 +22,8 @@ function M.new()
   local set_year, set_month
   local year_dd, month_dd
   local date_data = {}
+  local allow_any_past_dates = false
+  local EARLIEST_YEAR = 2004
   local months = {}
   local days = {}
   local select_func
@@ -49,6 +55,42 @@ function M.new()
   ---@param part DatePart
   local function get_valid_dates( part )
     local valid = {}
+
+    if allow_any_past_dates then
+      local now = time()
+      local t = date( "*t", now )
+      local current_year = tonumber( t.year )
+      local current_month = tonumber( t.month )
+      local current_day = tonumber( t.day )
+
+      if part == "Year" then
+        for y = EARLIEST_YEAR, current_year do
+          valid[ y ] = true
+        end
+        return valid
+      elseif part == "Month" then
+        if not set_year then return valid end
+        local max_month = (tonumber( set_year ) == current_year) and current_month or 12
+        for mth = 1, max_month do
+          valid[ mth ] = true
+        end
+        return valid
+      elseif part == "Day" then
+        if not set_year or not set_month then return valid end
+        local end_day = get_end_day_of_month( tonumber( set_year ), tonumber( set_month ) )
+        local max_day = end_day
+        if tonumber( set_year ) == current_year and tonumber( set_month ) == current_month then
+          max_day = current_day
+        elseif tonumber( set_year ) > current_year or (tonumber( set_year ) == current_year and tonumber( set_month ) > current_month) then
+          max_day = 0
+        end
+        for d = 1, max_day do
+          valid[ d ] = true
+        end
+        return valid
+      end
+    end
+
     for i, v in ipairs( date_data ) do
       local year = tonumber( date( "%Y", v.timestamp ) )
       local month = tonumber( date( "%m", v.timestamp ) )
@@ -69,6 +111,19 @@ function M.new()
   end
 
   local function refresh()
+    if allow_any_past_dates then
+      local t = date( "*t", time() )
+      local current_year = tonumber( t.year )
+      local current_month = tonumber( t.month )
+
+      if tonumber( set_year ) > current_year then
+        set_year = current_year
+      end
+      if tonumber( set_year ) == current_year and tonumber( set_month ) > current_month then
+        set_month = current_month
+      end
+    end
+
     local current_month = { year = set_year, month = set_month, day = "01" }
     local skip_days = date( "%w", time( current_month ) )
     local end_day = get_end_day_of_month( tonumber( set_year ), tonumber( set_month ) )
@@ -86,13 +141,20 @@ function M.new()
       day:SetText( i )
 
       if valid_days[ i ] then
-        day.mails = valid_days[ i ]
+        if type( valid_days[ i ] ) == "number" then
+          day.mails = valid_days[ i ]
+        else
+          day.mails = nil
+        end
         day:Enable()
       end
       day:Show()
 
       day:SetScript( "OnClick", function()
         local timestamp = time( { year = set_year, month = set_month, day = d } )
+        if allow_any_past_dates and timestamp > time() then
+          return
+        end
         if select_func then
           select_func( timestamp )
         end
@@ -110,30 +172,13 @@ function M.new()
     m.api.UIDropDownMenu_SetText( set_year, year_dd )
   end
 
-  local function pfui_skin()
-    if m.pfui_skin_enabled then
-      m.api.pfUI.api.SkinDropDown( year_dd, nil, nil, nil, true )
-      year_dd:SetPoint( "TOPLEFT", -5, -5 )
-      m.api.pfUI.api.SkinDropDown( month_dd, nil, nil, nil, true )
-      month_dd:SetPoint( "TOPLEFT", 79, -5 )
-      m.api.UIDropDownMenu_SetWidth( 70, month_dd )
-
-      for i = 1, 42 do
-        local button = days[ i ]
-        m.api.pfUI.api.SkinButton( button )
-        button:SetWidth( BTN_WIDTH - 1 )
-        button:SetHeight( BTN_HEIGHT - 1 )
-      end
-    end
-  end
-
   ---@param parent table
   ---@param index number
   local function create_date_button( parent, index )
     local button = m.api.CreateFrame( "Button", "Forged_MailboxCalendarDay" .. index .. "Button", parent, "UIPanelButtonTemplate" )
     button:SetWidth( BTN_WIDTH )
     button:SetHeight( BTN_HEIGHT )
-    button:GetFontString():SetFont( m.pfui_skin_enabled and m.api.pfUI.font_default or "Fonts/FRIZQT__.TTF", 9 )
+    button:GetFontString():SetFont( "Fonts/FRIZQT__.TTF", 9 )
     button:GetFontString():SetTextColor( 1, 1, 1, 1 )
 
     local orig_disable = button.Disable
@@ -149,6 +194,9 @@ function M.new()
     end
 
     button:SetScript( "OnEnter", function()
+      if type( button.mails ) ~= "number" then
+        return
+      end
       m.api.GameTooltip:SetOwner( this, "ANCHOR_RIGHT" )
       m.api.GameTooltip:SetText( button.mails .. " mail" .. (button.mails > 1 and "s" or ""), 1, 1, 1, 1, true )
       m.api.GameTooltip:Show()
@@ -170,15 +218,27 @@ function M.new()
 
     m.api.UIDropDownMenu_Initialize( dropdown, function()
       local valid_dates = get_valid_dates( name )
-      local info = {}
 
+      local keys = {}
       for i in pairs( valid_dates ) do
+        table.insert( keys, i )
+      end
+      table.sort( keys, function( a, b )
+        if name == "Year" then return a > b end
+        return a < b
+      end )
+
+      for _, i in ipairs( keys ) do
+        local info = {}
         info.arg1 = i
         info.arg2 = name == "Month" and months[ i ] or i
         info.value = info.arg1
         info.text = info.arg2
 
-        info.func = function( index, value )
+        -- Vanilla UIDropDownMenu calls without args; use `this`.
+        info.func = function()
+          local index = this.arg1
+          local value = this.arg2
           m.api.UIDropDownMenu_SetText( value, dropdown )
           m.api.CloseDropDownMenus()
           on_select( index, value )
@@ -196,6 +256,7 @@ function M.new()
     frame:SetFrameStrata( "FULLSCREEN_DIALOG" )
     frame:SetWidth( 195 )
     frame:SetHeight( 170 )
+    frame:SetClampedToScreen( true )
     frame:SetBackdrop( {
       bgFile = "Interface/Buttons/WHITE8x8",
       edgeFile = "Interface/Buttons/WHITE8x8",
@@ -212,9 +273,16 @@ function M.new()
     m.api.tinsert( m.api.UISpecialFrames, frame:GetName() )
 
     frame:SetScript( "OnLeave", function()
-      if m.api.MouseIsOver( frame ) then
-        return
+      if m.api.MouseIsOver( frame ) then return end
+
+      -- Don't auto-hide while interacting with dropdown menu lists.
+      for i = 1, 2 do
+        local list = m.api[ "DropDownList" .. i ]
+        if list and list:IsShown() then
+          return
+        end
       end
+
       calendar:Hide()
     end )
 
@@ -243,12 +311,12 @@ function M.new()
       end
     end
 
-    pfui_skin()
     return frame
   end
 
   local function show( data, current_date, anchor, on_select )
     date_data = data
+    if type( on_select ) ~= "function" then on_select = nil end
     set_year = tonumber( date( "%Y", current_date ) )
     set_month = tonumber( date( "%m", current_date ) )
     select_func = on_select
@@ -257,14 +325,20 @@ function M.new()
       calendar = create_calendar()
     end
 
-    if m.pfui_skin_enabled then
-      calendar:SetPoint( "TOPRIGHT", anchor, "BOTTOMRIGHT", 125, -4 )
-    else
-      calendar:SetPoint( "TOPRIGHT", anchor, "BOTTOMRIGHT", 100, 1 )
-    end
+    calendar:SetPoint( "TOPRIGHT", anchor, "BOTTOMRIGHT", 100, 1 )
 
     refresh()
     calendar:Show()
+  end
+
+  ---@param data table
+  ---@param current_date number
+  ---@param anchor table
+  ---@param on_select function
+  ---@param opts table?
+  local function show_with_opts( data, current_date, anchor, on_select, opts )
+    allow_any_past_dates = opts and opts.allow_any_past_dates or opts and opts.allow_any or false
+    show( data, current_date, anchor, on_select )
   end
 
   local function hide()
@@ -282,11 +356,12 @@ function M.new()
 
   ---@type Calendar
   return {
-    show = show,
+    show = show_with_opts,
     hide = hide,
     is_visible = is_visible
   }
 end
 
+m.date_picker = M
 m.Calendar = M
 return M
