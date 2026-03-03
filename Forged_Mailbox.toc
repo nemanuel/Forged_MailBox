@@ -1,10 +1,12 @@
 ﻿
 ## Interface: 11200
 ## Title: |cfff07d30Forged|r Mailbox
+## Notes: Mailbox enhancement
 ## Author: Chromag
 ## Version: 0.0.1
-## Notes: Mailbox enhancement
-## SavedVariables: Forged_Mailbox_AutoCompleteNames
-## SavedVariablesPerCharacter: Forged_Mailbox_To Forged_Mailbox_Point Forged_Mailbox_Log
+## Website: https://forgedworlds.com
+## Email: chromag@forgedworlds.com
+## SavedVariables: ForgedMailboxDB
+## SavedVariablesPerCharacter: ForgedMailboxCharDB ForgedMailboxLogDB
 
 Forged_Mailbox.xml

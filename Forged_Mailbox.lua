@@ -1,5 +1,9 @@
 Forged_Mailbox = Forged_Mailbox or {}
 L = Forged_Mailbox.L
+-- Fallback localization table to prevent nil errors
+if not L then
+  L = setmetatable({}, {__index = function(t, k) return k end})
+end
 
 local m = Forged_Mailbox
 local getn = table.getn ---@diagnostic disable-line: deprecated
@@ -30,17 +34,28 @@ Forged_Mailbox.debug_enabled = false
 Forged_Mailbox.calendar = m.Calendar.new()
 
 function Forged_Mailbox.ensure_savedvars()
-  m.api.Forged_Mailbox_Log = m.api.Forged_Mailbox_Log or {}
-  m.api.Forged_Mailbox_Log.Sent = m.api.Forged_Mailbox_Log.Sent or {}
-  m.api.Forged_Mailbox_Log.Received = m.api.Forged_Mailbox_Log.Received or {}
-  m.api.Forged_Mailbox_Log.Settings = m.api.Forged_Mailbox_Log.Settings or {}
+  -- Migrate old savedvar names (pre-rename) to new ones
+  if m.api.ForgedMailboxLogCharDB and not m.api.ForgedMailboxLogDB then
+    m.api.ForgedMailboxLogDB = m.api.ForgedMailboxLogCharDB
+  end
+  if m.api.Forged_Mailbox_Log and not m.api.ForgedMailboxLogDB then
+    m.api.ForgedMailboxLogDB = m.api.Forged_Mailbox_Log
+  end
+  if m.api.Forged_Mailbox_AutoCompleteNames and not m.api.ForgedMailboxDB then
+    m.api.ForgedMailboxDB = m.api.Forged_Mailbox_AutoCompleteNames
+  end
 
-  local settings = m.api.Forged_Mailbox_Log.Settings
+  m.api.ForgedMailboxLogDB = m.api.ForgedMailboxLogDB or {}
+  m.api.ForgedMailboxLogDB.Sent = m.api.ForgedMailboxLogDB.Sent or {}
+  m.api.ForgedMailboxLogDB.Received = m.api.ForgedMailboxLogDB.Received or {}
+  m.api.ForgedMailboxLogDB.Settings = m.api.ForgedMailboxLogDB.Settings or {}
+
+  local settings = m.api.ForgedMailboxLogDB.Settings
   if settings.Enabled == nil then settings.Enabled = false end
   settings.SentFilters = settings.SentFilters or { Money = 1, COD = 1, Other = 1 }
   settings.ReceivedFilters = settings.ReceivedFilters or { Money = 1, COD = 1, Other = 1, Returned = 1, AH = 1, AHSold = 1, AHOutbid = 1, AHWon = 1, AHCancelled = 1, AHExpired = 1 }
 
-  m.api.Forged_Mailbox_AutoCompleteNames = m.api.Forged_Mailbox_AutoCompleteNames or {}
+  m.api.ForgedMailboxDB = m.api.ForgedMailboxDB or {}
 end
 
 function Forged_Mailbox:init()
@@ -67,41 +82,44 @@ end
 function Forged_Mailbox.slash_command( args )
   m.ensure_savedvars()
   if args == "" or args == "help" then
-    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473Forged_Mailbox " .. L[ "Help" ] .. "|r" )
-    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm log|r " .. L[ "Toggle logging on/off" ] )
-    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm clear sent|r " .. L[ "Clear sent log" ] )
-    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm clear received|r " .. L[ "Clear received log" ] )
-    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm clear names|r " .. L[ "Clear saved recipient names from autocomplete" ] )
+    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473Forged_Mailbox Help|r" )
+    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm log|r Toggle logging on/off" )
+    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm clear sent|r Clear sent log" )
+    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm clear received|r Clear received log" )
+    m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473/tm clear names|r Clear saved recipient names from autocomplete" )
     return
   end
 
   if args == "log" then
-    m.api.Forged_Mailbox_Log[ "Settings" ][ "Enabled" ] = not m.api.Forged_Mailbox_Log[ "Settings" ][ "Enabled" ]
-    if m.api.Forged_Mailbox_Log[ "Settings" ][ "Enabled" ] then
-      m.info( L[ "Logging is enabled." ] )
+    m.api.ForgedMailboxLogDB[ "Settings" ][ "Enabled" ] = not m.api.ForgedMailboxLogDB[ "Settings" ][ "Enabled" ]
+    if m.api.ForgedMailboxLogDB[ "Settings" ][ "Enabled" ] then
+      m.info( "Logging is enabled." )
       if m.api.MailFrame:IsVisible() then
         m.api.MailFrameTab3:Show()
       end
     else
-      m.info( L[ "Logging is disabled." ] )
+      m.info( "Logging is disabled." )
       if m.api.MailFrame:IsVisible() then
         m.api.MailFrameTab3:Hide()
       end
     end
-    m.log_enabled = m.api.Forged_Mailbox_Log[ "Settings" ][ "Enabled" ]
+    m.log_enabled = m.api.ForgedMailboxLogDB[ "Settings" ][ "Enabled" ]
   end
 
   if string.find( args, "^clear" ) then
     if args == "clear sent" then
       m.info( L[ "Sent log cleared." ] )
-      m.api.Forged_Mailbox_Log[ "Sent" ] = {}
+        m.info( "Sent log cleared." )
+      m.api.ForgedMailboxLogDB[ "Sent" ] = {}
     elseif args == "clear received" then
       m.info( L[ "Received log cleared." ] )
-      m.api.Forged_Mailbox_Log[ "Received" ] = {}
+        m.info( "Received log cleared." )
+      m.api.ForgedMailboxLogDB[ "Received" ] = {}
     elseif args == "clear names" then
       m.info( L[ "Recipient autocomplete names have been cleared." ] )
+        m.info( "Recipient autocomplete names have been cleared." )
       local key = m.api.GetCVar( "realmName" ) .. "|" .. m.api.UnitFactionGroup( "player" )
-      m.api.Forged_Mailbox_AutoCompleteNames[ key ] = {}
+      m.api.ForgedMailboxDB[ key ] = {}
     end
   end
 
@@ -109,8 +127,10 @@ function Forged_Mailbox.slash_command( args )
     m.debug_enabled = not m.debug_enabled
     if m.debug_enabled then
       m.info( L[ "Debug is enabled." ] )
+      m.info( "Debug is enabled." )
     else
       m.info( L[ "Debug is disabled." ] )
+      m.info( "Debug is disabled." )
     end
   end
 end
@@ -179,10 +199,7 @@ function Forged_Mailbox.BAG_UPDATE()
 end
 
 function Forged_Mailbox.MAIL_SHOW()
-  if m.api.Forged_Mailbox_Point then
-    m.debug( "Set point" )
-    m.api.MailFrame:SetPoint( m.api.Forged_Mailbox_Point.point, m.api.Forged_Mailbox_Point.x, m.api.Forged_Mailbox_Point.y )
-  end
+  -- Removed Forged_Mailbox_Point functionality
 
   if not m.first_show then
     m.first_show = true
@@ -240,8 +257,8 @@ function Forged_Mailbox.ADDON_LOADED()
   local version = m.api.GetAddOnMetadata( "Forged_Mailbox", "Version" )
   m.info( string.format( "Loaded (|cffeda55fv%s|r).", version ) )
 
-  if not m.api.Forged_Mailbox_Log[ "Settings" ].first_run then
-    m.api.Forged_Mailbox_Log[ "Settings" ].first_run = version
+  if not m.api.ForgedMailboxLogDB[ "Settings" ].first_run then
+    m.api.ForgedMailboxLogDB[ "Settings" ].first_run = version
     m.info( "New in |cffeda55fv1.4|r: Enable logging with |cffabd473/tm log|r" )
   end
 
@@ -275,15 +292,15 @@ function Forged_Mailbox.PLAYER_LOGIN()
     m.api[ k ] = v
   end
   local key = m.api.GetCVar( "realmName" ) .. "|" .. m.api.UnitFactionGroup( "player" )
-  m.api.Forged_Mailbox_AutoCompleteNames[ key ] = m.api.Forged_Mailbox_AutoCompleteNames[ key ] or {}
-  for char, last_seen in m.api.Forged_Mailbox_AutoCompleteNames[ key ] do
+  m.api.ForgedMailboxDB[ key ] = m.api.ForgedMailboxDB[ key ] or {}
+  for char, last_seen in m.api.ForgedMailboxDB[ key ] do
     if m.api.GetTime() - last_seen > 60 * 60 * 24 * 30 then
-      m.api.Forged_Mailbox_AutoCompleteNames[ key ][ char ] = nil
+      m.api.ForgedMailboxDB[ key ][ char ] = nil
     end
   end
 
   m.add_auto_complete_name( m.api.UnitName( "player" ) )
-  m.log_enabled = m.api.Forged_Mailbox_Log[ "Settings" ][ "Enabled" ]
+  m.log_enabled = m.api.ForgedMailboxLogDB[ "Settings" ][ "Enabled" ]
 
   SLASH_FORGEDMAILBOX1 = "/forgedmailbox"
   SLASH_FORGEDMAILBOX2 = "/fmb"
@@ -328,7 +345,7 @@ end
 ---@param name string
 function Forged_Mailbox.add_auto_complete_name( name )
   local key = m.api.GetCVar( "realmName" ) .. "|" .. m.api.UnitFactionGroup( "player" )
-  m.api.Forged_Mailbox_AutoCompleteNames[ key ][ name ] = m.api.GetTime()
+  m.api.ForgedMailboxDB[ key ][ name ] = m.api.GetTime()
 end
 
 function Forged_Mailbox.inbox_load()
@@ -370,8 +387,10 @@ function Forged_Mailbox.set_cod_text()
 
   if m.api.SendMailCODAllButton:GetChecked() then
     m.api.SendMailMoneyText:SetText( text .. " " .. L[ "each mail" ] .. ":" )
+    m.api.SendMailMoneyText:SetText( text .. " each mail:" )
   else
     m.api.SendMailMoneyText:SetText( text .. " " .. L[ "1st mail" ] .. ":" )
+    m.api.SendMailMoneyText:SetText( text .. " 1st mail:" )
   end
 end
 
@@ -400,7 +419,7 @@ end
 ---@param money number
 function Forged_Mailbox.update_money( money )
   m.money_received = m.money_received + money
-  m.api.MoneyReceived:SetText( L[ "Money received" ] .. ": " .. m.format_money( m.money_received ) )
+  m.api.MoneyReceived:SetText( "Money received: " .. m.format_money( m.money_received ) )
 
   if m.money_received > 0 then
     m.api.MoneyReceived:Show()
@@ -412,7 +431,7 @@ end
 function Forged_Mailbox.on_drag_stop()
   this:StopMovingOrSizing()
   local point, _, _, x, y = m.api.MailFrame:GetPoint()
-  m.api.Forged_Mailbox_Point = { point = point, x = x, y = y }
+  -- Removed Forged_Mailbox_Point functionality
 end
 
 ---@param i number
@@ -882,7 +901,7 @@ function Forged_Mailbox.sendmail_load()
     m.api.MailAutoCompleteBox:Hide()
   end
 
-  m.api.SendMailCODAllButtonText:SetText( "  " .. L[ "All mails" ] )
+  m.api.SendMailCODAllButtonText:SetText( "  All mails" )
   m.api.SendMailCODAllButton:SetScript( "OnClick", m.set_cod_text )
 
   do
@@ -1153,7 +1172,7 @@ do
     index = nil
 
     local autoCompleteNames = {}
-    for name, time in m.api.Forged_Mailbox_AutoCompleteNames[ m.api.GetCVar "realmName" .. "|" .. m.api.UnitFactionGroup "player" ] do
+    for name, time in m.api.ForgedMailboxDB[ m.api.GetCVar "realmName" .. "|" .. m.api.UnitFactionGroup "player" ] do
       table.insert( autoCompleteNames, { name = name, time = time } )
     end
     table.sort( autoCompleteNames, function( a, b ) return b.time < a.time end )
@@ -1202,8 +1221,8 @@ do
 end
 
 function Forged_Mailbox.log.load()
-  m.api.Forged_MailboxLogTitleText:SetText( L[ "Log" ] )
-  m.api.MailFrameTab3:SetText( L[ "Log" ] )
+  m.api.Forged_MailboxLogTitleText:SetText( "Log" )
+  m.api.MailFrameTab3:SetText( "Log" )
 
   local font_file = m.pfui_skin_enabled and m.api.pfUI.font_default or "FONTS\\ARIALN.TTF"
   local font_size = 11
@@ -1245,7 +1264,7 @@ function Forged_Mailbox.log.load()
     m.log.scroll( -10 )
   end )
 
-  m.api.Forged_MailboxLogFiltersButton:SetText( L[ "Filters" ] )
+  m.api.Forged_MailboxLogFiltersButton:SetText( "Filters" )
   m.api.Forged_MailboxLogFiltersButton:GetFontString():SetPoint( "LEFT", m.api.Forged_MailboxLogFiltersButton, "LEFT", 10, 0 )
 
   m.api.Forged_MailboxLogFiltersButton:SetScript( "OnMouseDown", function()
@@ -1292,7 +1311,7 @@ function Forged_Mailbox.log.players_dropdown_on_load()
     if not m.current_log_type then return end
 
     local players = {}
-    for _, v in ipairs( m.api.Forged_Mailbox_Log[ m.current_log_type ] ) do
+    for _, v in ipairs( m.api.ForgedMailboxLogDB[ m.current_log_type ] ) do
       if v then
         players[ v.participant ] = players[ v.participant ] and players[ v.participant ] + 1 or 1
       end
@@ -1326,7 +1345,7 @@ function Forged_Mailbox.log.filter_dropdown()
 end
 
 function Forged_Mailbox.log.filters_menu( level )
-  local filters = m.api.Forged_Mailbox_Log[ "Settings" ][ m.current_log_type .. "Filters" ] or {}
+  local filters = m.api.ForgedMailboxLogDB[ "Settings" ][ m.current_log_type .. "Filters" ] or {}
   local info = {}
   info.keepShownOnClick = 1
 
@@ -1360,9 +1379,9 @@ end
 
 function Forged_Mailbox.log.toggle_filter( filter, parent_filter )
   if not parent_filter then parent_filter = "" end
-  local filter_value = m.api.Forged_Mailbox_Log[ "Settings" ][ m.current_log_type .. "Filters" ][ parent_filter .. filter ]
+  local filter_value = m.api.ForgedMailboxLogDB[ "Settings" ][ m.current_log_type .. "Filters" ][ parent_filter .. filter ]
 
-  m.api.Forged_Mailbox_Log[ "Settings" ][ m.current_log_type .. "Filters" ][ parent_filter .. filter ] = not filter_value
+  m.api.ForgedMailboxLogDB[ "Settings" ][ m.current_log_type .. "Filters" ][ parent_filter .. filter ] = not filter_value
   m.log.populate( m.current_log_type )
 end
 
@@ -1371,7 +1390,7 @@ function Forged_Mailbox.log.show_calendar()
     m.calendar.hide()
   else
     local text = string.gsub( this:GetName(), "Button", "Text" )
-    m.calendar.show( m.api.Forged_Mailbox_Log[ m.current_log_type ], time(), this, function( selected_date )
+    m.calendar.show( m.api.ForgedMailboxLogDB[ m.current_log_type ], time(), this, function( selected_date )
       local date_str = date( L[ "date_format" ], selected_date )
       m.api[ text ]:SetText( date_str )
 
@@ -1466,20 +1485,20 @@ function Forged_Mailbox.log.add( log_type, state )
     end
   end
 
-  table.insert( m.api.Forged_Mailbox_Log[ log_type ], data )
+  table.insert( m.api.ForgedMailboxLogDB[ log_type ], data )
 end
 
 ---@param log_type LogType
 ---@param index number?
 function Forged_Mailbox.log.populate( log_type, index )
   m.current_log_type = log_type
-  local filters = m.api.Forged_Mailbox_Log[ "Settings" ][ log_type .. "Filters" ] or {}
+  local filters = m.api.ForgedMailboxLogDB[ "Settings" ][ log_type .. "Filters" ] or {}
   local start_time = m[ log_type .. "_start_time" ]
   local end_time = m[ log_type .. "_end_time" ]
   if start_time then start_time = start_time - 43200 end
   if end_time then end_time = end_time + 43140 end
 
-  local log = m.filter( m.api.Forged_Mailbox_Log[ log_type ], function( item )
+  local log = m.filter( m.api.ForgedMailboxLogDB[ log_type ], function( item )
     local ret =
         (filters.Money and item.money and item.money > 0 and (not item.cod or item.cod == 0) and not item.ah)
         or
@@ -1513,7 +1532,9 @@ function Forged_Mailbox.log.populate( log_type, index )
   end )
 
   m.api.Forged_MailboxLogStartTimeText:SetText( start_time and date( L[ "date_format" ], start_time ) or "" )
+    m.api.Forged_MailboxLogStartTimeText:SetText( start_time and date( "%d.%m.%Y", start_time ) or "" )
   m.api.Forged_MailboxLogEndTimeText:SetText( end_time and date( L[ "date_format" ], end_time ) or "" )
+  m.api.Forged_MailboxLogEndTimeText:SetText( end_time and date( "%d.%m.%Y", end_time ) or "" )
 
   if not log then return end
   local log_count = getn( log )
