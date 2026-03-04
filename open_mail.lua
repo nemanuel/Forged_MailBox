@@ -62,6 +62,7 @@ end
 ---@param manual boolean?
 function Forged_Mailbox.inbox_open( i, manual )
   m.debug( "inbox_open" )
+  m.inbox_open_in_progress = true
   local package_icon, _, sender, subject, money, cod, days_left, has_item, read, returned, _, _, gm = m.api.GetInboxHeaderInfo( i )
 
   -- Track & ledger money immediately for open-all (money-only mails like AH sales).
@@ -118,6 +119,8 @@ function Forged_Mailbox.inbox_open( i, manual )
   m.TakeInboxMoney( i )
   m.TakeInboxItem( i )
   m.DeleteInboxItem( i )
+
+  m.inbox_open_in_progress = false
 end
 
 function Forged_Mailbox.inbox_update_lock()
@@ -152,6 +155,12 @@ function Forged_Mailbox.hook.TakeInboxMoney( index )
       icon = package_icon,
       item = has_item and m.api.GetInboxItem( index ) or nil,
     }
+    -- If the player uses the default mail UI (open mail -> Take Money),
+    -- we still want expanded ledger rows to have per-mail money values.
+    -- Avoid duplicates when our open-all / right-click-open flow already logged it.
+    if (not m.inbox_open_in_progress) and (not m.inbox_opening) then
+      if m.log and m.log.add then m.log.add( "Received", entry ) end
+    end
     if m.ledger and m.ledger.add then m.ledger.add( "Received", entry ) end
   end
 

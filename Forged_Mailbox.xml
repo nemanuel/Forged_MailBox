@@ -1082,7 +1082,11 @@
       </Layer>
     </Layers>
     <Frames>
-      <Button name="Forged_MailboxLedgerFiltersButton" inherits="UIPanelButtonTemplate" text="Filters">
+      <Button
+        name="Forged_MailboxLedgerFiltersButton"
+        inherits="UIPanelButtonTemplate"
+        text="Filters"
+      >
         <Size>
           <AbsDimension x="70" y="22" />
         </Size>

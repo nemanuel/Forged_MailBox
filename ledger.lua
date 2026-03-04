@@ -6,6 +6,51 @@ m.ledger = m.ledger or {}
 local LEDGER_ROW_ICON = "Interface/Icons/INV_Misc_Note_06"
 local LEDGER_SUBROW_INDENT = "  "
 
+local function escape_lua_pattern( s )
+  if type( s ) ~= "string" then return "" end
+  return (string.gsub( s, "([%(%)%.%%%+%-%*%?%[%^%$])", "%%%1" ))
+end
+
+local function strip_auction_subject_prefix( subject )
+  if type( subject ) ~= "string" then return "" end
+  if not m.api then return subject end
+
+  -- Remove the localized auction prefix (e.g. "Auction successful: ") and keep only the item/remaining text.
+  for _, key in ipairs( {
+    "AUCTION_SOLD_MAIL_SUBJECT",
+    "AUCTION_REMOVED_MAIL_SUBJECT",
+    "AUCTION_EXPIRED_MAIL_SUBJECT",
+    "AUCTION_WON_MAIL_SUBJECT",
+    "AUCTION_OUTBID_MAIL_SUBJECT",
+  } ) do
+    local pattern = m.api[ key ]
+    if type( pattern ) == "string" and pattern ~= "" then
+      local stem = string.gsub( pattern, "%%s", "" )
+      local escaped_stem = escape_lua_pattern( stem )
+      if escaped_stem ~= "" then
+        subject = string.gsub( subject, "^" .. escaped_stem, "" )
+      end
+    end
+  end
+
+  subject = string.gsub( subject, "^%s+", "" )
+  return subject
+end
+
+local function should_hide_subrow_participant( row, participant )
+  if row and row.ah then
+    return true
+  end
+
+  if not participant or participant == "" then
+    return false
+  end
+
+  local p = string.lower( participant )
+  return string.find( p, "auction house", 1, true ) ~= nil
+      or string.find( p, "acution house", 1, true ) ~= nil
+end
+
 ---@param timestamp number
 local function format_ledger_day_label( timestamp )
   if type( timestamp ) ~= "number" then return "" end
@@ -82,6 +127,10 @@ local function get_visible_row_frame( i )
   return m.api and m.api[ "Forged_MailboxLedgerItem" .. i ]
 end
 
+local function get_visible_subrow_frame( i )
+  return m.api and m.api[ "Forged_MailboxLedgerSubItem" .. i ]
+end
+
 function Forged_Mailbox.ledger.on_row_click( i )
   local frame = get_visible_row_frame( i )
   if not frame then return end
@@ -127,6 +176,42 @@ function Forged_Mailbox.ledger.load()
   local font_file = "FONTS\\ARIALN.TTF"
   local font_size = 11
 
+  local entries_parent = m.api and m.api.Forged_MailboxLedgerEntriesFrame
+  if entries_parent and m.api and m.api.CreateFrame then
+    for i = 1, 10 do
+      local sub_name = "Forged_MailboxLedgerSubItem" .. i
+      if not m.api[ sub_name ] then
+        local sub = m.api.CreateFrame( "Frame", sub_name, entries_parent )
+        sub:SetHeight( 30 )
+        sub:SetPoint( "TOPLEFT", entries_parent, "TOPLEFT", -5, 0 )
+        sub:SetPoint( "RIGHT", entries_parent, "RIGHT", 0, 0 )
+        if i > 1 and m.api[ "Forged_MailboxLedgerSubItem" .. (i - 1) ] then
+          sub:ClearAllPoints()
+          sub:SetPoint( "TOPLEFT", m.api[ "Forged_MailboxLedgerSubItem" .. (i - 1) ], "BOTTOMLEFT", 0, -1 )
+          sub:SetPoint( "RIGHT", entries_parent, "RIGHT", 0, 0 )
+        end
+
+        local bg = sub:CreateTexture( sub_name .. "Background", "ARTWORK" )
+        bg:SetTexture( "Interface/Buttons/WHITE8x8" )
+        bg:SetHeight( 1 )
+        bg:SetPoint( "BOTTOMLEFT", sub, "BOTTOMLEFT", 0, -1 )
+        bg:SetPoint( "RIGHT", sub, "RIGHT", 0, 0 )
+
+        local money = sub:CreateFontString( sub_name .. "Money", "ARTWORK", "GameFontNormal" )
+        money:SetWidth( 80 )
+        money:SetHeight( 14 )
+        money:SetPoint( "RIGHT", sub, "RIGHT", -4, 0 )
+
+        local subject = sub:CreateFontString( sub_name .. "Subject", "ARTWORK", "GameFontNormal" )
+        subject:SetHeight( 14 )
+        subject:SetPoint( "LEFT", sub, "LEFT", 34, 0 )
+        subject:SetPoint( "RIGHT", money, "LEFT", -8, 0 )
+
+        sub:Hide()
+      end
+    end
+  end
+
   for i = 1, 10 do
     m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ]:SetVertexColor( .5, .5, .5, 0.6 )
     m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:SetTextColor( 1, 0.82, 0, 1 )
@@ -163,6 +248,39 @@ function Forged_Mailbox.ledger.load()
     m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]:SetVertexColor( m.api.NORMAL_FONT_COLOR.r, m.api.NORMAL_FONT_COLOR.g, m.api.NORMAL_FONT_COLOR.b )
     if i > 1 then
       m.api[ "Forged_MailboxLedgerItem" .. i ]:SetPoint( "TOPLEFT", m.api[ "Forged_MailboxLedgerItem" .. i - 1 ], "BOTTOMLEFT", 0, -1 )
+    end
+
+    local sub = get_visible_subrow_frame( i )
+    if sub then
+      sub:EnableMouse( false )
+      if i > 1 then
+        sub:ClearAllPoints()
+        sub:SetPoint( "TOPLEFT", get_visible_subrow_frame( i - 1 ), "BOTTOMLEFT", 0, -1 )
+        if entries_parent then
+          sub:SetPoint( "RIGHT", entries_parent, "RIGHT", 0, 0 )
+        end
+      end
+
+      local sub_bg = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Background" ]
+      if sub_bg then
+        sub_bg:SetVertexColor( .5, .5, .5, 0.25 )
+      end
+
+      local sub_subject = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Subject" ]
+      if sub_subject then
+        sub_subject:SetTextColor( 1, 1, 1, 1 )
+        sub_subject:SetJustifyH( "LEFT" )
+        sub_subject:SetFont( font_file, font_size )
+      end
+
+      local sub_money = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Money" ]
+      if sub_money then
+        sub_money:SetTextColor( 1, 1, 1, 1 )
+        sub_money:SetJustifyH( "RIGHT" )
+        sub_money:SetFont( font_file, font_size )
+      end
+
+      sub:Hide()
     end
 
     if m.api[ "Forged_MailboxLedgerItem" .. i ] then
@@ -550,102 +668,91 @@ function Forged_Mailbox.ledger.populate( log_type, index )
 
   for i = 1, 10 do
     local row = display_rows[ index + i ]
-    if row then
-      local row_frame = m.api[ "Forged_MailboxLedgerItem" .. i ]
-      if row_frame then
-        row_frame.fmb_row_data = row
+    local day_frame = get_visible_row_frame( i )
+    local sub_frame = get_visible_subrow_frame( i )
+
+    if not row then
+      if day_frame then day_frame:Hide() end
+      if sub_frame then sub_frame:Hide() end
+    elseif row.kind == "day" then
+      if sub_frame then sub_frame:Hide() end
+      if day_frame then
+        day_frame.fmb_row_data = row
+        day_frame:Show()
       end
 
-      local is_day_row = row.kind == "day"
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Icon" ] then
-        if is_day_row then
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Icon" ]:Show()
-        else
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Icon" ]:Hide()
-        end
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Icon" ]:Show()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "IconTexture" ] then
-        if is_day_row then
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "IconTexture" ]:SetTexture( LEDGER_ROW_ICON )
-        end
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "IconTexture" ]:SetTexture( LEDGER_ROW_ICON )
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ] then
-        if is_day_row then
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:Show()
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:SetText( format_ledger_day_label( row.day ) )
-        else
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:Hide()
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:SetText( "" )
-        end
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:Show()
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "TimeStamp" ]:SetText( format_ledger_day_label( row.day ) )
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ] then
-        if is_day_row then
-          if row.sold_count and row.sold_count > 0 then
-            m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:SetText( string.format( "%d sale%s", row.sold_count, row.sold_count == 1 and "" or "s" ) )
-          else
-            m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:SetText( "" )
-          end
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:Show()
+        if row.sold_count and row.sold_count > 0 then
+          m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:SetText( string.format( "%d sale%s", row.sold_count, row.sold_count == 1 and "" or "s" ) )
         else
           m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:SetText( "" )
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:Hide()
         end
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:Show()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ] then
-        if is_day_row then
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:SetText( m.ledger.format_money_icons( row.total ) )
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:Show()
-        else
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:SetText( "" )
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:Hide()
-        end
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:SetText( m.ledger.format_money_icons( row.total ) )
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:Show()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ] then
-        if is_day_row then
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:SetText( "" )
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:Hide()
-        else
-          local ts = tonumber( row.timestamp ) or 0
-          local time_text = ts > 0 and date( "%H:%M", ts ) or ""
-          local subject = row.subject or ""
-          local participant = row.participant or ""
-
-          local ah = row.ah and tostring( row.ah ) or ""
-          local money_text = m.ledger.format_money_icons( row.money )
-
-          local prefix = LEDGER_SUBROW_INDENT
-          if time_text ~= "" then
-            prefix = prefix .. time_text .. " "
-          end
-
-          local details = subject
-          if ah ~= "" then
-            details = ah .. ": " .. details
-          end
-
-          if money_text and money_text ~= "-" and money_text ~= "0g 0s 0c" then
-            details = details .. " - " .. money_text
-          end
-          if participant ~= "" then
-            details = details .. " (" .. participant .. ")"
-          end
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:SetText( prefix .. details )
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:Show()
-        end
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:SetText( "" )
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:Hide()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ] then
         m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]:SetTexture( "" )
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ] then
-        if is_day_row then
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ]:SetVertexColor( .5, .5, .5, 0.6 )
+        m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ]:SetVertexColor( .5, .5, .5, 0.6 )
+      end
+    else
+      if day_frame then day_frame:Hide() end
+      if sub_frame then
+        sub_frame.fmb_row_data = row
+        sub_frame:Show()
+      end
+
+      local ts = tonumber( row.timestamp ) or 0
+      local subject = strip_auction_subject_prefix( row.subject or "" )
+      local participant = row.participant or ""
+
+      if should_hide_subrow_participant( row, participant ) then
+        participant = ""
+      end
+
+      local money_text = m.ledger.format_money_icons( row.money )
+
+      local details = subject
+      if participant ~= "" then
+        details = details .. " (" .. participant .. ")"
+      end
+
+      local sub_subject = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Subject" ]
+      if sub_subject then
+        sub_subject:SetText( LEDGER_SUBROW_INDENT .. details )
+      end
+
+      local sub_money = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Money" ]
+      if sub_money then
+        if money_text and money_text ~= "-" and money_text ~= "0g 0s 0c" then
+          sub_money:SetText( money_text )
         else
-          m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ]:SetVertexColor( .5, .5, .5, 0.25 )
+          sub_money:SetText( "n/a" )
         end
       end
-      m.api[ "Forged_MailboxLedgerItem" .. i ]:Show();
-    else
-      m.api[ "Forged_MailboxLedgerItem" .. i ]:Hide();
+
+      local sub_bg = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Background" ]
+      if sub_bg then
+        sub_bg:SetVertexColor( .5, .5, .5, 0.25 )
+      end
     end
   end
 end
