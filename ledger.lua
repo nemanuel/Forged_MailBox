@@ -184,7 +184,8 @@ function Forged_Mailbox.ledger.load()
         local money = sub:CreateFontString( sub_name .. "Money", "ARTWORK", "GameFontNormal" )
         money:SetWidth( 80 )
         money:SetHeight( 14 )
-        money:SetPoint( "RIGHT", sub, "RIGHT", -4, 0 )
+        -- Align with the parent ledger row money column (shifted left to make room for the expand arrow).
+        money:SetPoint( "RIGHT", sub, "RIGHT", -24, 0 )
 
         local idx = sub:CreateFontString( sub_name .. "Index", "ARTWORK", "GameFontNormal" )
         idx:SetWidth( 20 )
@@ -676,7 +677,11 @@ function Forged_Mailbox.ledger.populate( log_type, index )
 
   m.api.Forged_MailboxLedgerTitleText:SetText( L[ "Ledger" ] )
   if m.api.Forged_MailboxLedgerStatusText then
-    m.api.Forged_MailboxLedgerStatusText:SetText( "Total " .. m.ledger.format_money_icons( total_sales ) )
+    if m.format_money then
+      m.api.Forged_MailboxLedgerStatusText:SetText( "Total " .. m.format_money( total_sales ) )
+    else
+      m.api.Forged_MailboxLedgerStatusText:SetText( "Total " .. m.ledger.format_money_icons( total_sales ) )
+    end
     m.api.Forged_MailboxLedgerStatusText:Show()
   end
 
@@ -714,7 +719,11 @@ function Forged_Mailbox.ledger.populate( log_type, index )
         m.api[ "Forged_MailboxLedgerItem" .. i .. "Money" ]:Show()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ] then
-        m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:SetText( m.ledger.format_money_icons( row.total ) )
+        if m.format_money then
+          m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:SetText( m.format_money( tonumber( row.total ) or 0 ) )
+        else
+          m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:SetText( m.ledger.format_money_icons( row.total ) )
+        end
         m.api[ "Forged_MailboxLedgerItem" .. i .. "Participant" ]:Show()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ] then
@@ -751,7 +760,7 @@ function Forged_Mailbox.ledger.populate( log_type, index )
         participant = ""
       end
 
-      local money_text = m.ledger.format_money_icons( row.money )
+      local money_value = tonumber( row.money ) or 0
 
       local details = subject
       if participant ~= "" then
@@ -774,8 +783,10 @@ function Forged_Mailbox.ledger.populate( log_type, index )
 
       local sub_money = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Money" ]
       if sub_money then
-        if money_text and money_text ~= "-" and money_text ~= "0g 0s 0c" then
-          sub_money:SetText( money_text )
+        if money_value and money_value > 0 and m.format_money then
+          sub_money:SetText( m.format_money( money_value ) )
+        elseif money_value and money_value > 0 then
+          sub_money:SetText( tostring( money_value ) )
         else
           sub_money:SetText( "n/a" )
         end
