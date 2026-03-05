@@ -144,6 +144,9 @@ end
 function Forged_Mailbox.hook.TakeInboxMoney( index )
   local package_icon, _, sender, subject, money, cod, days_left, has_item, _, returned, _, _, gm = m.api.GetInboxHeaderInfo( index )
   if money and money > 0 then
+    m.took_money_for = m.took_money_for or {}
+    m.took_money_for[ index ] = true
+
     local entry = {
       from = sender,
       subject = subject,
@@ -209,6 +212,12 @@ end
 
 function Forged_Mailbox.hook.OpenMailFrame_OnHide()
   if m.api.InboxFrame.openMailID then
+    if m.took_money_for and m.took_money_for[ m.api.InboxFrame.openMailID ] then
+      m.took_money_for[ m.api.InboxFrame.openMailID ] = nil
+      m.orig.OpenMailFrame_OnHide()
+      return
+    end
+
     local package_icon, _, sender, subject, money, cod, days_left, itemID, _, returned, text_created, _, gm = m.api.GetInboxHeaderInfo( m.api.InboxFrame.openMailID )
     if (money == 0 and not itemID and text_created) then
       local received_item = m.api.GetInboxItem( m.api.InboxFrame.openMailID )
