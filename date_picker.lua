@@ -150,16 +150,26 @@ function M.new()
       end
       day:Show()
 
-      day:SetScript( "OnClick", function()
-        local timestamp = time( { year = set_year, month = set_month, day = d } )
+      local function handle_select()
+        local timestamp = time( { year = set_year, month = set_month, day = d, hour = 0, min = 0, sec = 0 } )
         if allow_any_past_dates and timestamp > time() then
           return
         end
+
         if select_func then
-          select_func( timestamp )
+          local ok, err = pcall( select_func, timestamp )
+          if not ok and m.api and m.api.DEFAULT_CHAT_FRAME and m.api.DEFAULT_CHAT_FRAME.AddMessage then
+            m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffff0000Forged_Mailbox|r: Calendar select failed: " .. tostring( err ) )
+          end
         end
-        calendar:Hide()
-      end )
+
+        if calendar then
+          calendar:Hide()
+        end
+      end
+
+      day:SetScript( "OnClick", handle_select )
+      day:SetScript( "OnMouseUp", handle_select )
     end
 
     if tonumber( skip_days + end_day ) < 36 then
@@ -178,6 +188,8 @@ function M.new()
     local button = m.api.CreateFrame( "Button", "Forged_MailboxCalendarDay" .. index .. "Button", parent, "UIPanelButtonTemplate" )
     button:SetWidth( BTN_WIDTH )
     button:SetHeight( BTN_HEIGHT )
+    button:EnableMouse( true )
+    button:RegisterForClicks( "AnyUp" )
     button:GetFontString():SetFont( "Fonts/FRIZQT__.TTF", 9 )
     button:GetFontString():SetTextColor( 1, 1, 1, 1 )
 
