@@ -107,6 +107,69 @@ local function safe_pairs( t )
   return pairs( {} )
 end
 
+local function classify_ledger_bucket_key_from_log_entry( entry )
+  if type( entry ) ~= "table" then
+    return "Money", false
+  end
+
+  local ah = entry.ah
+  if ah == "Sold" then
+    return "AHSold", true
+  elseif ah == "Removed" then
+    -- LogDB stores "Removed"; Ledger historically used "AHCancelled".
+    return "AHCancelled", false
+  elseif ah == "Expired" then
+    return "AHExpired", false
+  elseif ah == "Won" then
+    return "AHWon", false
+  elseif ah == "Outbid" then
+    return "AHOutbid", false
+  end
+
+  return "Money", false
+end
+
+local function build_daily_buckets_from_logdb( start_day, end_day )
+  local buckets = {}
+
+  if not m.api or not m.api.ForgedMailboxLogDB or type( m.api.ForgedMailboxLogDB.Received ) ~= "table" then
+    return buckets
+  end
+
+  for _, entry in ipairs( m.api.ForgedMailboxLogDB.Received ) do
+    if type( entry ) == "table" then
+      local money = tonumber( entry.money ) or 0
+      if money and money > 0 then
+        local ts = tonumber( entry.timestamp ) or 0
+        if ts <= 0 then
+          ts = time()
+        end
+
+        local day = day_start( ts )
+        if start_day and day < start_day then
+          -- Skip
+        elseif end_day and day > end_day then
+          -- Skip
+        else
+          local bucket = buckets[ day ]
+          if type( bucket ) ~= "table" then
+            bucket = {}
+            buckets[ day ] = bucket
+          end
+
+          local bucket_key, is_ah_sold = classify_ledger_bucket_key_from_log_entry( entry )
+          bucket[ bucket_key ] = (tonumber( bucket[ bucket_key ] ) or 0) + money
+          if is_ah_sold then
+            bucket.AHSoldCount = (tonumber( bucket.AHSoldCount ) or 0) + 1
+          end
+        end
+      end
+    end
+  end
+
+  return buckets
+end
+
 local function get_visible_row_frame( i )
   return m.api and m.api[ "Forged_MailboxLedgerItem" .. i ]
 end
@@ -369,44 +432,11 @@ function Forged_Mailbox.ledger.filter_dropdown()
 end
 
 function Forged_Mailbox.ledger.filters_menu( level )
-  local filters = m.api.ForgedMailboxLedgerDB[ "Settings" ][ m.ledger.current_log_type .. "Filters" ] or {}
-  local info = {}
-  info.keepShownOnClick = 1
-
-  local values = { "Money", "COD", "Other" }
-  if m.ledger.current_log_type == "Received" then
-    table.insert( values, "Returned" )
-    table.insert( values, "AH" )
-  end
-
-  if level == 1 then
-    for _, filter in values do
-      info.text = L[ filter ]
-      info.checked = filters[ filter ]
-      info.arg1 = filter
-      info.func = m.ledger.toggle_filter
-      if filter == "AH" then info.hasArrow = 1 end
-
-      m.api.UIDropDownMenu_AddButton( info, level )
-    end
-  elseif level == 2 then
-    for _, filter in { "Sold", "Cancelled", "Expired", "Won", "Outbid" } do
-      info.text = L[ filter ]
-      info.checked = filters[ "AH" .. filter ]
-      info.arg1 = filter
-      info.arg2 = "AH"
-      info.func = m.ledger.toggle_filter
-      m.api.UIDropDownMenu_AddButton( info, level )
-    end
-  end
+  -- Filters are not used by Ledger; menu intentionally empty.
 end
 
 function Forged_Mailbox.ledger.toggle_filter( filter, parent_filter )
-  if not parent_filter then parent_filter = "" end
-  local filter_value = m.api.ForgedMailboxLedgerDB[ "Settings" ][ m.ledger.current_log_type .. "Filters" ][ parent_filter .. filter ]
-
-  m.api.ForgedMailboxLedgerDB[ "Settings" ][ m.ledger.current_log_type .. "Filters" ][ parent_filter .. filter ] = not filter_value
-  m.ledger.populate( m.ledger.current_log_type )
+  -- Filters are not used by Ledger.
 end
 
 function Forged_Mailbox.ledger.show_calendar( which )
@@ -417,16 +447,23 @@ function Forged_Mailbox.ledger.show_calendar( which )
       which = "Start"
     end
 
-    m.api.ForgedMailboxLedgerDB = m.api.ForgedMailboxLedgerDB or {}
-    m.api.ForgedMailboxLedgerDB.Daily = m.api.ForgedMailboxLedgerDB.Daily or {}
-
     local date_data = {}
     local latest = nil
-    for day in pairs( m.api.ForgedMailboxLedgerDB.Daily ) do
-      if type( day ) == "number" then
-        table.insert( date_data, { timestamp = day } )
-        if (not latest) or day > latest then
-          latest = day
+
+    local day_set = {}
+    if m.api and m.api.ForgedMailboxLogDB and type( m.api.ForgedMailboxLogDB.Received ) == "table" then
+      for _, entry in ipairs( m.api.ForgedMailboxLogDB.Received ) do
+        if type( entry ) == "table" and (tonumber( entry.money ) or 0) > 0 then
+          local ts = tonumber( entry.timestamp ) or 0
+          if ts <= 0 then ts = time() end
+          local day = day_start( ts )
+          if day and not day_set[ day ] then
+            day_set[ day ] = true
+            table.insert( date_data, { timestamp = day } )
+            if (not latest) or day > latest then
+              latest = day
+            end
+          end
         end
       end
     end
@@ -512,49 +549,11 @@ end
 ---@param log_type LogType
 ---@param state table
 function Forged_Mailbox.ledger.add( log_type, state )
+  -- Ledger daily rows are derived from LogDB; do not persist daily aggregates.
   if log_type ~= "Received" then return end
 
   local money = tonumber( state and state.money ) or 0
   if money <= 0 then return end
-
-  m.api.ForgedMailboxLedgerDB = m.api.ForgedMailboxLedgerDB or {}
-  m.api.ForgedMailboxLedgerDB.Daily = m.api.ForgedMailboxLedgerDB.Daily or {}
-
-  -- Keep Ledger day buckets consistent with Log timestamps: bucket by "now".
-  local received_ts = time()
-  local key = day_start( received_ts )
-
-  local bucket = m.api.ForgedMailboxLedgerDB.Daily[ key ]
-  if type( bucket ) == "number" then
-    bucket = { Money = bucket }
-  elseif type( bucket ) ~= "table" then
-    bucket = {}
-  end
-
-  local subject = (state and state.subject) or ""
-  local bucket_key = "Money"
-  local is_ah_sold = false
-
-  if subject ~= "" then
-    if string.find( subject, string.gsub( m.api.AUCTION_SOLD_MAIL_SUBJECT, "%%s", "" ) ) then
-      bucket_key = "AHSold"
-      is_ah_sold = true
-    elseif string.find( subject, string.gsub( m.api.AUCTION_REMOVED_MAIL_SUBJECT, "%%s", "" ) ) then
-      bucket_key = "AHCancelled"
-    elseif string.find( subject, string.gsub( m.api.AUCTION_EXPIRED_MAIL_SUBJECT, "%%s", "" ) ) then
-      bucket_key = "AHExpired"
-    elseif string.find( subject, string.gsub( m.api.AUCTION_WON_MAIL_SUBJECT, "%%s", "" ) ) then
-      bucket_key = "AHWon"
-    elseif string.find( subject, string.gsub( m.api.AUCTION_OUTBID_MAIL_SUBJECT, "%%s", "" ) ) then
-      bucket_key = "AHOutbid"
-    end
-  end
-
-  bucket[ bucket_key ] = (tonumber( bucket[ bucket_key ] ) or 0) + money
-  if is_ah_sold then
-    bucket.AHSoldCount = (tonumber( bucket.AHSoldCount ) or 0) + 1
-  end
-  m.api.ForgedMailboxLedgerDB.Daily[ key ] = bucket
 
   if m.api.Forged_MailboxLedgerFrame and m.api.Forged_MailboxLedgerFrame:IsShown() then
     m.ledger.populate()
@@ -569,9 +568,6 @@ function Forged_Mailbox.ledger.populate( log_type, index )
     m.ledger.set_default_period()
   end
 
-  m.api.ForgedMailboxLedgerDB = m.api.ForgedMailboxLedgerDB or {}
-  m.api.ForgedMailboxLedgerDB.Daily = m.api.ForgedMailboxLedgerDB.Daily or {}
-
   local start_day = m.ledger.daily_start_time
   local end_day = m.ledger.daily_end_time
   if start_day and end_day and start_day > end_day then
@@ -580,33 +576,50 @@ function Forged_Mailbox.ledger.populate( log_type, index )
 
   local days = {}
   local total_sales = 0
-  for day, bucket in safe_pairs( m.api.ForgedMailboxLedgerDB.Daily ) do
-    if type( day ) == "number" then
-      if start_day and day < start_day then
-        -- Skip
-      elseif end_day and day > end_day then
-        -- Skip
-      else
+
+  local daily
+  do
+    local received = m.api and m.api.ForgedMailboxLogDB and m.api.ForgedMailboxLogDB.Received
+    local log_count = (type( received ) == "table") and getn( received ) or 0
+    local last_ts = 0
+    if log_count > 0 and type( received[ log_count ] ) == "table" then
+      last_ts = tonumber( received[ log_count ].timestamp ) or 0
+    end
+
+    local cache = m.ledger._daily_cache
+    if type( cache ) == "table"
+        and cache.start_day == start_day
+        and cache.end_day == end_day
+        and cache.log_count == log_count
+        and cache.last_ts == last_ts
+        and type( cache.daily ) == "table" then
+      daily = cache.daily
+    else
+      daily = build_daily_buckets_from_logdb( start_day, end_day )
+      m.ledger._daily_cache = {
+        start_day = start_day,
+        end_day = end_day,
+        log_count = log_count,
+        last_ts = last_ts,
+        daily = daily,
+      }
+    end
+  end
+  for day, bucket in safe_pairs( daily ) do
+    if type( day ) == "number" and type( bucket ) == "table" then
       local money_total = 0
-      local sold_count = 0
-      if type( bucket ) == "number" then
-        money_total = bucket
-      elseif type( bucket ) == "table" then
-        money_total = money_total + (tonumber( bucket.Money ) or 0)
-        money_total = money_total + (tonumber( bucket.AHSold ) or 0)
-        money_total = money_total + (tonumber( bucket.AHCancelled ) or 0)
-        money_total = money_total + (tonumber( bucket.AHExpired ) or 0)
-        money_total = money_total + (tonumber( bucket.AHWon ) or 0)
-        money_total = money_total + (tonumber( bucket.AHOutbid ) or 0)
+      money_total = money_total + (tonumber( bucket.Money ) or 0)
+      money_total = money_total + (tonumber( bucket.AHSold ) or 0)
+      money_total = money_total + (tonumber( bucket.AHCancelled ) or 0)
+      money_total = money_total + (tonumber( bucket.AHExpired ) or 0)
+      money_total = money_total + (tonumber( bucket.AHWon ) or 0)
+      money_total = money_total + (tonumber( bucket.AHOutbid ) or 0)
 
-        sold_count = sold_count + (tonumber( bucket.AHSoldCount ) or 0)
-
-        total_sales = total_sales + (tonumber( bucket.AHSold ) or 0)
-      end
+      local sold_count = tonumber( bucket.AHSoldCount ) or 0
+      total_sales = total_sales + (tonumber( bucket.AHSold ) or 0)
 
       if money_total and money_total > 0 then
         table.insert( days, { day = day, total = money_total, sold_count = sold_count } )
-      end
       end
     end
   end

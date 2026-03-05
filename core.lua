@@ -94,23 +94,15 @@ function Forged_Mailbox.ensure_savedvars()
   m.api.ForgedMailboxLogDB.Received = m.api.ForgedMailboxLogDB.Received or {}
   m.api.ForgedMailboxLogDB.Settings = m.api.ForgedMailboxLogDB.Settings or {}
 
-  m.api.ForgedMailboxLedgerDB = m.api.ForgedMailboxLedgerDB or {}
-  m.api.ForgedMailboxLedgerDB.Sent = m.api.ForgedMailboxLedgerDB.Sent or {}
-  m.api.ForgedMailboxLedgerDB.Received = m.api.ForgedMailboxLedgerDB.Received or {}
-  m.api.ForgedMailboxLedgerDB.Settings = m.api.ForgedMailboxLedgerDB.Settings or {}
-  m.api.ForgedMailboxLedgerDB.Daily = m.api.ForgedMailboxLedgerDB.Daily or {}
+  -- Ledger is derived entirely from LogDB; do not use or persist a separate LedgerDB.
+  m.api.ForgedMailboxLedgerDB = nil
+  -- Legacy/unused SavedVariables (keep nil so they drop from the next SavedVariables write).
+  m.api.ForgedMailboxCharDB = nil
 
   local settings = m.api.ForgedMailboxLogDB.Settings
   if settings.Enabled == nil then settings.Enabled = false end
   settings.SentFilters = settings.SentFilters or { Money = 1, COD = 1, Other = 1 }
   settings.ReceivedFilters = settings.ReceivedFilters
-      or { Money = 1, COD = 1, Other = 1, Returned = 1, AH = 1, AHSold = 1, AHOutbid = 1, AHWon = 1, AHCancelled = 1, AHExpired = 1 }
-
-  local ledger_settings = m.api.ForgedMailboxLedgerDB.Settings
-  -- Ledger is always enabled and must not be controlled by /fmb log.
-  ledger_settings.Enabled = true
-  ledger_settings.SentFilters = ledger_settings.SentFilters or { Money = 1, COD = 1, Other = 1 }
-  ledger_settings.ReceivedFilters = ledger_settings.ReceivedFilters
       or { Money = 1, COD = 1, Other = 1, Returned = 1, AH = 1, AHSold = 1, AHOutbid = 1, AHWon = 1, AHCancelled = 1, AHExpired = 1 }
 
   -- Period filters are session-only and reset when opening the mailbox.

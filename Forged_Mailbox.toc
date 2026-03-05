@@ -7,7 +7,7 @@
 ## Website: https://forgedworlds.com
 ## Email: chromag@forgedworlds.com
 ## SavedVariables: ForgedMailboxDB
-## SavedVariablesPerCharacter: ForgedMailboxCharDB ForgedMailboxLogDB ForgedMailboxLedgerDB
+## SavedVariablesPerCharacter: ForgedMailboxLogDB
 
 date_picker.lua
 core.lua

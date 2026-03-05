@@ -16,7 +16,7 @@ It also streamlines item trading with a smart multi-send workflow that automatic
 - **Send multiple items (multi-mail)**
   - Adds a large attachment grid (up to **21** items)
   - When you send, the addon sends **one mail per attachment** automatically
-  - If you set a manual subject, it will be suffixed like ` [1/5]`, ` [2/5]`, …
+  - If you set a manual subject, it will be suffixed like `[1/5]`, `[2/5]`, …
   - Postage is calculated for multiple mails (cost is multiplied by the number of outgoing messages)
 
 ## Installation
@@ -50,7 +50,7 @@ Open a mailbox and go to the **Send Mail** tab.
 ### What happens when you click Send
 
 - The addon sends **one mail per attachment**.
-- If you typed a subject and you are sending multiple mails, the subject gets a counter like ` [1/5]`.
+- If you typed a subject and you are sending multiple mails, the subject gets a counter like `[1/5]`.
 
 ### COD / money behavior
 
@@ -87,9 +87,7 @@ Note: The in-game help text currently prints commands with `/tm ...`, but the ac
 Declared in [Forged_Mailbox.toc](Forged_Mailbox.toc):
 
 - `ForgedMailboxDB` (account-wide)
-- `ForgedMailboxCharDB` (per-character)
 - `ForgedMailboxLogDB` (per-character)
-- `ForgedMailboxLedgerDB` (per-character)
 
 ## Notes / limitations
 
