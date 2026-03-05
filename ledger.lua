@@ -88,7 +88,8 @@ end
 function Forged_Mailbox.ledger.set_default_period()
   m.ledger = m.ledger or {}
   m.ledger.daily_end_time = day_start( time() )
-  m.ledger.daily_start_time = day_start( time() - (30 * 86400) )
+  -- Inclusive day buckets: use 29 days back to show the last 30 days including today.
+  m.ledger.daily_start_time = day_start( time() - (29 * 86400) )
 
   if m.api and m.api.Forged_MailboxLedgerStartTimeText then
     m.api.Forged_MailboxLedgerStartTimeText:SetText( date( L[ "date_format" ], m.ledger.daily_start_time ) )

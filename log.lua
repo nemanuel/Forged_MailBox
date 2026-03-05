@@ -13,7 +13,9 @@ function Forged_Mailbox.log.set_default_period()
   m.log = m.log or {}
 
   local end_time = day_marker( time() )
-  local start_time = day_marker( time() - (30 * 86400) )
+  -- Inclusive day marker window (expanded to full day in filter): use 29 days back
+  -- to show the last 30 days including today.
+  local start_time = day_marker( time() - (29 * 86400) )
 
   m.log.Received_start_time = start_time
   m.log.Received_end_time = end_time

@@ -286,7 +286,7 @@ function Forged_Mailbox.MAIL_SHOW()
   m.money_received = 0
   m.update_money( 0 )
 
-  -- Default Log/Ledger period: last 31 days (no SavedVariables persistence).
+  -- Default Log/Ledger period: last 30 days (no SavedVariables persistence).
   if m.ledger and m.ledger.set_default_period then
     m.ledger.set_default_period()
   end
