@@ -5,6 +5,7 @@ m.ledger = m.ledger or {}
 
 local LEDGER_ROW_ICON = "Interface/Icons/INV_Misc_Note_06"
 local LEDGER_SUBROW_INDENT = "  "
+local LEDGER_ARROW_TEXTURE = "Interface\\Addons\\Forged_Mailbox\\assets\\DownArrow.tga"
 
 local function escape_lua_pattern( s )
   if type( s ) ~= "string" then return "" end
@@ -232,7 +233,13 @@ function Forged_Mailbox.ledger.load()
       m.api[ "Forged_MailboxLedgerItem" .. i .. "IconTexture" ]:SetTexture( LEDGER_ROW_ICON )
     end
     if m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ] then
-      m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]:SetTexture( "" )
+      local status = m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]
+      status:SetTexture( LEDGER_ARROW_TEXTURE )
+      status:SetVertexColor( 1, 1, 1, 1 )
+      status:SetWidth( 12 )
+      status:SetHeight( 12 )
+      status:ClearAllPoints()
+      status:SetPoint( "RIGHT", m.api[ "Forged_MailboxLedgerItem" .. i ], "RIGHT", -8, 0 )
     end
     m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]:SetVertexColor( m.api.NORMAL_FONT_COLOR.r, m.api.NORMAL_FONT_COLOR.g, m.api.NORMAL_FONT_COLOR.b )
     if i > 1 then
@@ -715,7 +722,16 @@ function Forged_Mailbox.ledger.populate( log_type, index )
         m.api[ "Forged_MailboxLedgerItem" .. i .. "Subject" ]:Hide()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ] then
-        m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]:SetTexture( "" )
+        local status = m.api[ "Forged_MailboxLedgerItem" .. i .. "Status" ]
+        status:SetTexture( LEDGER_ARROW_TEXTURE )
+        if expanded_day and row.day == expanded_day then
+          -- Flip vertically to point up.
+          status:SetTexCoord( 0, 1, 1, 0 )
+        else
+          -- Default down.
+          status:SetTexCoord( 0, 1, 0, 1 )
+        end
+        status:Show()
       end
       if m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ] then
         m.api[ "Forged_MailboxLedgerItem" .. i .. "Background" ]:SetVertexColor( .5, .5, .5, 0.6 )
