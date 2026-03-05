@@ -357,6 +357,11 @@ function Forged_Mailbox.log.populate( log_type, index )
     return ret
   end )
 
+  -- Display newest entries first.
+  table.sort( log, function( a, b )
+    return (tonumber( a.timestamp ) or 0) > (tonumber( b.timestamp ) or 0)
+  end )
+
   m.api.Forged_MailboxLogStartTimeText:SetText( display_start_time and date( L[ "date_format" ], display_start_time ) or "" )
   m.api.Forged_MailboxLogEndTimeText:SetText( display_end_time and date( L[ "date_format" ], display_end_time ) or "" )
 
@@ -366,13 +371,13 @@ function Forged_Mailbox.log.populate( log_type, index )
   m.api.Forged_MailboxLogScrollFrameScrollBar:SetMinMaxValues( 0, math.max( 0, log_count - 10 ) )
 
   if not index then
-    m.api.Forged_MailboxLogScrollFrameScrollBar:SetValue( log_count - 10 )
+    m.api.Forged_MailboxLogScrollFrameScrollBar:SetValue( 0 )
     m.api.Forged_MailboxLogScrollFrameScrollBar:SetScript( "OnUpdate", function()
-      m.api.Forged_MailboxLogScrollFrameScrollBar:SetValue( log_count - 10 )
+      m.api.Forged_MailboxLogScrollFrameScrollBar:SetValue( 0 )
       m.api.Forged_MailboxLogScrollFrameScrollBar:SetScript( "OnUpdate", nil )
     end )
 
-    index = math.max( 0, log_count - 10 )
+    index = 0
   end
 
   m.api.Forged_MailboxLogTitleText:SetText( string.format( "%s %s", L[ log_type ], L[ "Log" ] ) )
