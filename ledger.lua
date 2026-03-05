@@ -289,8 +289,12 @@ function Forged_Mailbox.ledger.load()
   end
   m.api.Forged_MailboxLedgerItem10Background:Hide()
 
-  m.api.Forged_MailboxLedgerStatusText:SetTextColor( 1, 1, 1, 1 )
-  m.api.Forged_MailboxLedgerStatusText:SetFont( "Fonts\\FRIZQT__.TTF", 10 )
+  if m.api.Forged_MailboxLedgerStatusText then
+    m.api.Forged_MailboxLedgerStatusText:SetTextColor( 1, 1, 1, 1 )
+    m.api.Forged_MailboxLedgerStatusText:SetJustifyH( "LEFT" )
+    m.api.Forged_MailboxLedgerStatusText:SetFont( "Fonts\\FRIZQT__.TTF", 10 )
+    m.api.Forged_MailboxLedgerStatusText:Show()
+  end
   m.api.Forged_MailboxLedgerScrollFrameScrollBar:SetValueStep( 1 )
   m.api.Forged_MailboxLedgerScrollFrameScrollBar:SetScript( "OnValueChanged", m.ledger.on_scroll_value_changed )
 
@@ -567,6 +571,7 @@ function Forged_Mailbox.ledger.populate( log_type, index )
   end
 
   local days = {}
+  local total_sales = 0
   for day, bucket in safe_pairs( m.api.ForgedMailboxLedgerDB.Daily ) do
     if type( day ) == "number" then
       if start_day and day < start_day then
@@ -587,6 +592,8 @@ function Forged_Mailbox.ledger.populate( log_type, index )
         money_total = money_total + (tonumber( bucket.AHOutbid ) or 0)
 
         sold_count = sold_count + (tonumber( bucket.AHSoldCount ) or 0)
+
+        total_sales = total_sales + (tonumber( bucket.AHSold ) or 0)
       end
 
       if money_total and money_total > 0 then
@@ -661,14 +668,10 @@ function Forged_Mailbox.ledger.populate( log_type, index )
   end
 
   m.api.Forged_MailboxLedgerTitleText:SetText( L[ "Ledger" ] )
-  m.api.Forged_MailboxLedgerStatusText:SetText(
-    string.format(
-      "Showing %d-%d of %d",
-      (index == 0 and row_count == 0) and index or index + 1,
-      math.min( row_count, index + 10 ),
-      row_count
-    )
-  )
+  if m.api.Forged_MailboxLedgerStatusText then
+    m.api.Forged_MailboxLedgerStatusText:SetText( "Total " .. m.ledger.format_money_icons( total_sales ) )
+    m.api.Forged_MailboxLedgerStatusText:Show()
+  end
 
   for i = 1, 10 do
     local row = display_rows[ index + i ]
