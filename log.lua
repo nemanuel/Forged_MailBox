@@ -195,11 +195,16 @@ function Forged_Mailbox.log.show_calendar()
     m.calendar.hide()
   else
     local text = string.gsub( this:GetName(), "Button", "Text" )
-    m.calendar.show( m.api.ForgedMailboxLogDB[ m.log.current_log_type ], time(), this, function( selected_date )
+
+    local v = m.log.current_log_type .. (string.find( text, "Start" ) and "_start_time" or "_end_time")
+    local current_date = m.log[ v ]
+    if type( current_date ) ~= "number" then
+      current_date = time()
+    end
+
+    m.calendar.show( m.api.ForgedMailboxLogDB[ m.log.current_log_type ], current_date, this, function( selected_date )
       local date_str = date( L[ "date_format" ], selected_date )
       m.api[ text ]:SetText( date_str )
-
-      local v = m.log.current_log_type .. (string.find( text, "Start" ) and "_start_time" or "_end_time")
       m.log[ v ] = selected_date
       m.log.populate( m.log.current_log_type )
     end, { allow_any_past_dates = true } )

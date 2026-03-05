@@ -428,7 +428,17 @@ function Forged_Mailbox.ledger.show_calendar( which )
       table.insert( date_data, { timestamp = latest } )
     end
 
-    m.calendar.show( date_data, latest, this, function( selected_date )
+    local current_date
+    if which == "Start" then
+      current_date = m.ledger.daily_start_time
+    else
+      current_date = m.ledger.daily_end_time
+    end
+    if type( current_date ) ~= "number" then
+      current_date = latest
+    end
+
+    m.calendar.show( date_data, current_date, this, function( selected_date )
       local day = day_start( selected_date )
       local date_str = date( L[ "date_format" ], selected_date )
 
