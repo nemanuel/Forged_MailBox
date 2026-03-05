@@ -99,24 +99,6 @@ function Forged_Mailbox.ledger.set_default_period()
   end
 end
 
----@param days_left number?
----@param reference_time number?
-local function infer_received_timestamp_from_days_left( days_left, reference_time )
-  if type( days_left ) ~= "number" then return nil end
-  if type( reference_time ) ~= "number" then
-    reference_time = time()
-  end
-
-  -- Vanilla mail expiry is typically 30 days; the API only exposes "days left",
-  -- so we infer received date from that.
-  local max_days = 30
-  local age_days = max_days - days_left
-  if age_days < 0 then age_days = 0 end
-  if age_days > max_days then age_days = max_days end
-
-  return reference_time - (age_days * 86400)
-end
-
 local function safe_pairs( t )
   if type( t ) == "table" then
     return pairs( t )
@@ -526,7 +508,8 @@ function Forged_Mailbox.ledger.add( log_type, state )
   m.api.ForgedMailboxLedgerDB = m.api.ForgedMailboxLedgerDB or {}
   m.api.ForgedMailboxLedgerDB.Daily = m.api.ForgedMailboxLedgerDB.Daily or {}
 
-  local received_ts = infer_received_timestamp_from_days_left( state and state.days_left, time() ) or time()
+  -- Keep Ledger day buckets consistent with Log timestamps: bucket by "now".
+  local received_ts = time()
   local key = day_start( received_ts )
 
   local bucket = m.api.ForgedMailboxLedgerDB.Daily[ key ]
@@ -624,11 +607,7 @@ function Forged_Mailbox.ledger.populate( log_type, index )
     expanded_log_entries = {}
     for _, entry in ipairs( m.api.ForgedMailboxLogDB.Received ) do
       if type( entry ) == "table" and entry.ah then
-        local received_ts = infer_received_timestamp_from_days_left(
-          tonumber( entry.days_left ),
-          tonumber( entry.timestamp ) or time()
-        )
-        local entry_day = day_start( received_ts or (tonumber( entry.timestamp ) or time()) )
+        local entry_day = day_start( tonumber( entry.timestamp ) or time() )
         if entry_day == expanded_day then
           table.insert( expanded_log_entries, entry )
         end
