@@ -634,7 +634,8 @@ function Forged_Mailbox.ledger.populate( log_type, index )
   if expanded_day and m.api and m.api.ForgedMailboxLogDB and type( m.api.ForgedMailboxLogDB.Received ) == "table" then
     expanded_log_entries = {}
     for _, entry in ipairs( m.api.ForgedMailboxLogDB.Received ) do
-      if type( entry ) == "table" and entry.ah then
+      -- Expanded subrows are intended to show per-mail Auction House sales only.
+      if type( entry ) == "table" and entry.ah == "Sold" and (tonumber( entry.money ) or 0) > 0 then
         local entry_day = day_start( tonumber( entry.timestamp ) or time() )
         if entry_day == expanded_day then
           table.insert( expanded_log_entries, entry )
