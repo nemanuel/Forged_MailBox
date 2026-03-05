@@ -202,9 +202,15 @@ function Forged_Mailbox.ledger.load()
         money:SetHeight( 14 )
         money:SetPoint( "RIGHT", sub, "RIGHT", -4, 0 )
 
+        local idx = sub:CreateFontString( sub_name .. "Index", "ARTWORK", "GameFontNormal" )
+        idx:SetWidth( 20 )
+        idx:SetHeight( 14 )
+        idx:SetPoint( "LEFT", sub, "LEFT", 10, 0 )
+        idx:SetJustifyH( "RIGHT" )
+
         local subject = sub:CreateFontString( sub_name .. "Subject", "ARTWORK", "GameFontNormal" )
         subject:SetHeight( 14 )
-        subject:SetPoint( "LEFT", sub, "LEFT", 34, 0 )
+        subject:SetPoint( "LEFT", idx, "RIGHT", 8, 0 )
         subject:SetPoint( "RIGHT", money, "LEFT", -8, 0 )
 
         sub:Hide()
@@ -271,6 +277,13 @@ function Forged_Mailbox.ledger.load()
         sub_subject:SetTextColor( 1, 1, 1, 1 )
         sub_subject:SetJustifyH( "LEFT" )
         sub_subject:SetFont( font_file, font_size )
+      end
+
+      local sub_index = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Index" ]
+      if sub_index then
+        sub_index:SetTextColor( 1, 1, 1, 1 )
+        sub_index:SetJustifyH( "RIGHT" )
+        sub_index:SetFont( font_file, font_size )
       end
 
       local sub_money = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Money" ]
@@ -629,10 +642,11 @@ function Forged_Mailbox.ledger.populate( log_type, index )
   for _, day_row in ipairs( days ) do
     table.insert( display_rows, { kind = "day", day = day_row.day, total = day_row.total, sold_count = day_row.sold_count } )
     if expanded_day and day_row.day == expanded_day and expanded_log_entries and getn( expanded_log_entries ) > 0 then
-      for _, entry in ipairs( expanded_log_entries ) do
+      for entry_index, entry in ipairs( expanded_log_entries ) do
         table.insert( display_rows, {
           kind = "mail",
           day = day_row.day,
+          sub_index = entry_index,
           timestamp = tonumber( entry.timestamp ) or 0,
           participant = entry.participant,
           subject = entry.subject,
@@ -748,6 +762,15 @@ function Forged_Mailbox.ledger.populate( log_type, index )
       local sub_subject = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Subject" ]
       if sub_subject then
         sub_subject:SetText( LEDGER_SUBROW_INDENT .. details )
+      end
+
+      local sub_index = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Index" ]
+      if sub_index then
+        if row.sub_index then
+          sub_index:SetText( tostring( row.sub_index ) )
+        else
+          sub_index:SetText( "" )
+        end
       end
 
       local sub_money = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Money" ]
