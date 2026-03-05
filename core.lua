@@ -214,9 +214,6 @@ function Forged_Mailbox.on_update()
     m.inbox_update = false
     local _, _, sender, subject, _, COD, _, _, _, _, _, _, isGM = m.api.GetInboxHeaderInfo( m.inbox_index )
     if m.inbox_index > m.api.GetInboxNumItems() then
-      if m.money_received > 0 then
-        m.info( string.format( "%s%s.", m.format_money( m.money_received ), L[ "collected" ] ) )
-      end
       m.inbox_abort()
     elseif m.inbox_open_filter == "auction"
         and m.inbox_is_auction_mail
@@ -288,8 +285,6 @@ function Forged_Mailbox.MAIL_SHOW()
   end
 
   m.timer = 0
-  m.money_received = 0
-  m.update_money( 0 )
 
   -- Default Log/Ledger period: last 30 days (no SavedVariables persistence).
   if m.ledger and m.ledger.set_default_period then
@@ -442,18 +437,6 @@ function Forged_Mailbox.format_money( copper )
   end
 
   return result
-end
-
----@param money number
-function Forged_Mailbox.update_money( money )
-  m.money_received = m.money_received + money
-  m.api.MoneyReceived:SetText( "Money received: " .. m.format_money( m.money_received ) )
-
-  if m.money_received > 0 then
-    m.api.MoneyReceived:Show()
-  else
-    m.api.MoneyReceived:Hide()
-  end
 end
 
 function Forged_Mailbox.on_drag_stop()

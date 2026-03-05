@@ -304,29 +304,6 @@
       </Anchor>
     </Anchors>
   </CheckButton>
-  <Frame parent="InboxFrame">
-    <Layers>
-      <Layer level="ARTWORK">
-        <FontString
-          name="MoneyReceived"
-          inherits="GameFontNormal"
-          text="Money received:"
-          hidden="true"
-        >
-          <Size>
-            <AbsDimension x="224" y="14" />
-          </Size>
-          <Anchors>
-            <Anchor point="TOPLEFT" relativeTo="InboxTitleText" relativePoint="BOTTOMLEFT">
-              <Offset>
-                <AbsDimension x="0" y="-5" />
-              </Offset>
-            </Anchor>
-          </Anchors>
-        </FontString>
-      </Layer>
-    </Layers>
-  </Frame>
   <Frame name="Forged_MailboxLogItemTemplate" virtual="true" hidden="true">
     <Size>
       <AbsDimension x="100" y="30" />

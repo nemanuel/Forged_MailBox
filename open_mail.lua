@@ -1,5 +1,62 @@
 local m = Forged_Mailbox
 
+local function ensure_open_confirm_dialogs()
+    if not m.api then
+        return
+    end
+
+    local dialogs = m.api.StaticPopupDialogs
+    if type(dialogs) ~= "table" then
+        return
+    end
+
+    if not dialogs.FORGED_MAILBOX_OPEN_ALL_MAIL then
+        dialogs.FORGED_MAILBOX_OPEN_ALL_MAIL = {
+            text = "Are you sure you want to open all mail?",
+            button1 = m.api.YES or "Yes",
+            button2 = m.api.NO or "No",
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1,
+            OnAccept = function()
+                if Forged_Mailbox and Forged_Mailbox.inbox_open_all then
+                    Forged_Mailbox.inbox_open_all()
+                end
+            end
+        }
+    end
+
+    if not dialogs.FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL then
+        dialogs.FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL = {
+            text = "Are you sure you want to open all auction mail?",
+            button1 = m.api.YES or "Yes",
+            button2 = m.api.NO or "No",
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1,
+            OnAccept = function()
+                if Forged_Mailbox and Forged_Mailbox.inbox_open_auction_all then
+                    Forged_Mailbox.inbox_open_auction_all()
+                end
+            end
+        }
+    end
+end
+
+function Forged_Mailbox.inbox_confirm_open_all()
+    ensure_open_confirm_dialogs()
+    if m.api and m.api.StaticPopup_Show then
+        m.api.StaticPopup_Show("FORGED_MAILBOX_OPEN_ALL_MAIL")
+    end
+end
+
+function Forged_Mailbox.inbox_confirm_open_auction_all()
+    ensure_open_confirm_dialogs()
+    if m.api and m.api.StaticPopup_Show then
+        m.api.StaticPopup_Show("FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL")
+    end
+end
+
 local function is_auction_mail(sender, subject)
     if not m.api then
         return false
@@ -57,10 +114,10 @@ function Forged_Mailbox.inbox_load()
     local btn = m.api.CreateFrame("Button", "Forged_MailboxOpenMailButton", m.api.InboxFrame, "UIPanelButtonTemplate")
     btn:ClearAllPoints()
     btn:SetPoint("TOP", m.api.InboxFrame, "TOP", -42, -46)
-    btn:SetText("Open All Mail")
-    btn:SetWidth(104)
+    btn:SetText("Open Mail")
+    btn:SetWidth(86)
     btn:SetHeight(25)
-    btn:SetScript("OnClick", m.inbox_open_all)
+    btn:SetScript("OnClick", m.inbox_confirm_open_all)
 
     local btn_auction = m.api.CreateFrame("Button", "Forged_MailboxOpenAuctionMailButton", m.api.InboxFrame,
         "UIPanelButtonTemplate")
@@ -69,7 +126,7 @@ function Forged_Mailbox.inbox_load()
     btn_auction:SetText("Open Auction Mail")
     btn_auction:SetWidth(136)
     btn_auction:SetHeight(25)
-    btn_auction:SetScript("OnClick", m.inbox_open_auction_all)
+    btn_auction:SetScript("OnClick", m.inbox_confirm_open_auction_all)
 
     for i = 1, 7 do
         m.api["Forged_MailboxReturnedArrow" .. i .. "Texture"]:SetVertexColor(m.api.NORMAL_FONT_COLOR.r,
@@ -102,18 +159,6 @@ function Forged_Mailbox.inbox_abort()
     m.inbox_update = false
 end
 
----@param money number
-function Forged_Mailbox.update_money(money)
-    m.money_received = m.money_received + money
-    m.api.MoneyReceived:SetText("Money received: " .. m.format_money(m.money_received))
-
-    if m.money_received > 0 then
-        m.api.MoneyReceived:Show()
-    else
-        m.api.MoneyReceived:Hide()
-    end
-end
-
 ---@param i number
 ---@param manual boolean?
 function Forged_Mailbox.inbox_open(i, manual)
@@ -125,7 +170,6 @@ function Forged_Mailbox.inbox_open(i, manual)
 
     -- Track & ledger money immediately for open-all (money-only mails like AH sales).
     if (not manual) and money and money > 0 then
-        m.update_money(money)
         local entry = {
             from = sender,
             subject = subject,
@@ -154,7 +198,6 @@ function Forged_Mailbox.inbox_open(i, manual)
 
     if (read and not has_item) or manual then
         if manual and money > 0 then
-            m.update_money(money)
             m.received_money = money
         end
         if money == 0 or manual then
