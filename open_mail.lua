@@ -28,7 +28,7 @@ local function ensure_open_confirm_dialogs()
 
     if not dialogs.FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL then
         dialogs.FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL = {
-            text = "Are you sure you want to open all auction mail?",
+            text = "Are you sure you want to open all sold auction mail?",
             button1 = m.api.YES or "Yes",
             button2 = m.api.NO or "No",
             timeout = 0,
@@ -62,29 +62,23 @@ local function is_auction_mail(sender, subject)
         return false
     end
 
-    if type(sender) == "string" and sender ~= "" then
-        local s = string.lower(sender)
-        if string.find(s, "auction house", 1, true) ~= nil then
-            return true
-        end
-    end
-
+    -- Only treat SUCCESSFUL auction sales as "auction mail" for the Open Auction Mail button.
+    -- Do NOT match by sender ("Auction House"), because that would include outbid/won/expired/etc.
     if type(subject) ~= "string" or subject == "" then
         return false
     end
 
-    for _, key in ipairs({"AUCTION_SOLD_MAIL_SUBJECT", "AUCTION_REMOVED_MAIL_SUBJECT", "AUCTION_EXPIRED_MAIL_SUBJECT",
-                          "AUCTION_WON_MAIL_SUBJECT", "AUCTION_OUTBID_MAIL_SUBJECT"}) do
-        local pattern = m.api[key]
-        if type(pattern) == "string" and pattern ~= "" then
-            local stem = string.gsub(pattern, "%%s", "")
-            if stem ~= "" and string.find(subject, stem, 1, true) then
-                return true
-            end
-        end
+    local pattern = m.api.AUCTION_SOLD_MAIL_SUBJECT
+    if type(pattern) ~= "string" or pattern == "" then
+        return false
     end
 
-    return false
+    local stem = string.gsub(pattern, "%%s", "")
+    if stem == "" then
+        return false
+    end
+
+    return string.find(subject, stem, 1, true) ~= nil
 end
 
 function Forged_Mailbox.inbox_is_auction_mail(sender, subject)
@@ -123,7 +117,7 @@ function Forged_Mailbox.inbox_load()
         "UIPanelButtonTemplate")
     btn_auction:ClearAllPoints()
     btn_auction:SetPoint("LEFT", btn, "RIGHT", 4, 0)
-    btn_auction:SetText("Open Auction Mail")
+    btn_auction:SetText("Open Sold Auction Mail")
     btn_auction:SetWidth(136)
     btn_auction:SetHeight(25)
     btn_auction:SetScript("OnClick", m.inbox_confirm_open_auction_all)

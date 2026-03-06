@@ -251,6 +251,16 @@ end
 function Forged_Mailbox.MAIL_SHOW()
   -- Removed Forged_Mailbox_Point functionality
 
+  -- Some clients/UI mods create portions of the Blizzard mail UI lazily.
+  -- Initialize UI-dependent modules the first time the mailbox is shown.
+  if not m._mail_ui_loaded then
+    m._mail_ui_loaded = true
+    if type( m.inbox_load ) == "function" then m.inbox_load() end
+    if type( m.sendmail_load ) == "function" then m.sendmail_load() end
+    if m.log and type( m.log.load ) == "function" then m.log.load() end
+    if m.ledger and type( m.ledger.load ) == "function" then m.ledger.load() end
+  end
+
   if not m.first_show then
     m.first_show = true
     local background = ({ m.api.SendMailPackageButton:GetRegions() })[ 1 ]
@@ -290,7 +300,9 @@ end
 function Forged_Mailbox.MAIL_CLOSED()
   m.inbox_abort()
   m.sendmail_sending = false
-  m.sendmail_clear()
+  if m.sendmail_initialized and type( m.sendmail_clear ) == "function" then
+    m.sendmail_clear()
+  end
 end
 
 function Forged_Mailbox.UI_ERROR_MESSAGE()
@@ -359,10 +371,25 @@ function Forged_Mailbox.ADDON_LOADED()
   end
 
   -- Feature module entrypoints (loaded via .toc)
-  call_or_warn( "inbox_load", m.inbox_load )
-  call_or_warn( "sendmail_load", m.sendmail_load )
-  call_or_warn( "log.load", m.log and m.log.load )
-  call_or_warn( "ledger.load", m.ledger and m.ledger.load )
+  -- NOTE: We only validate existence here. Actual initialization is deferred to
+  -- MAIL_SHOW to avoid nil frame errors on clients where the Blizzard mail UI is
+  -- created lazily.
+  local function warn_missing( label, fn )
+    if type( fn ) == "function" then return end
+    if m.api and m.api.DEFAULT_CHAT_FRAME and m.api.DEFAULT_CHAT_FRAME.AddMessage then
+      m.api.DEFAULT_CHAT_FRAME:AddMessage(
+        string.format(
+          "|cffff0000Forged_Mailbox|r: Missing module entrypoint '%s'. Check that the file is listed in Forged_Mailbox.toc and restart the client (TOC changes don't always apply to /reload).",
+          tostring( label )
+        )
+      )
+    end
+  end
+
+  warn_missing( "inbox_load", m.inbox_load )
+  warn_missing( "sendmail_load", m.sendmail_load )
+  warn_missing( "log.load", m.log and m.log.load )
+  warn_missing( "ledger.load", m.ledger and m.ledger.load )
 end
 
 function Forged_Mailbox.PLAYER_LOGIN()

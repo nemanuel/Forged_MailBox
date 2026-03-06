@@ -1,11 +1,55 @@
 local m = Forged_Mailbox
 local getn = table.getn ---@diagnostic disable-line: deprecated
 
-local function pack( ... ) return arg end
-
 local ATTACHMENTS_MAX = 21
 local ATTACHMENTS_PER_ROW_SEND = 7
 local ATTACHMENTS_MAX_ROWS_SEND = 3
+
+local function get_send_button()
+  return (m.api and (m.api.SendMailMailButton or m.api.MailMailButton)) or nil
+end
+
+local function item_bag_slot( item )
+  if type( item ) ~= "table" then return end
+  return item[ 1 ], item[ 2 ]
+end
+
+local function item_link( item )
+  if type( item ) ~= "table" then return end
+  return item[ 3 ]
+end
+
+local function ensure_item_link( item )
+  if type( item ) ~= "table" then return item end
+  if item[ 1 ] == nil or item[ 2 ] == nil then return item end
+  if item[ 3 ] == nil and m.api and m.api.GetContainerItemLink then
+    item[ 3 ] = m.api.GetContainerItemLink( item[ 1 ], item[ 2 ] )
+  end
+  return item
+end
+
+function Forged_Mailbox.sendmail_item_is_valid( item )
+  if type( item ) ~= "table" then return false end
+  local bag, slot = item_bag_slot( item )
+  if bag == nil or slot == nil then return false end
+  local expected = item_link( item )
+  if not expected or expected == "" then
+    expected = m.api.GetContainerItemLink( bag, slot )
+    item[ 3 ] = expected
+  end
+  local current = m.api.GetContainerItemLink( bag, slot )
+  return current and expected and current == expected
+end
+
+function Forged_Mailbox.sendmail_ensure_loaded()
+  if m.sendmail_initialized then return true end
+  if not (m.api and m.api.SendMailFrame and m.api.SendMailNameEditBox and m.api.SendMailBodyEditBox) then
+    return false
+  end
+  if type( m.sendmail_load ) ~= "function" then return false end
+  m.sendmail_load()
+  return m.sendmail_initialized and true or false
+end
 
 function Forged_Mailbox.set_cod_text()
   local text = string.sub( m.api.COD_AMOUNT, 1, string.len( m.api.COD_AMOUNT ) - 1 )
@@ -22,6 +66,13 @@ function Forged_Mailbox.set_cod_text()
 end
 
 function Forged_Mailbox.hook.SendMailFrame_Update()
+  if not m.sendmail_ensure_loaded() then
+    if m.orig and type( m.orig.SendMailFrame_Update ) == "function" then
+      return m.orig.SendMailFrame_Update()
+    end
+    return
+  end
+
   local gap
   local last = m.sendmail_num_attachments()
 
@@ -30,7 +81,12 @@ function Forged_Mailbox.hook.SendMailFrame_Update()
 
     local texture, count
     if btn.item then
-      texture, count = m.api.GetContainerItemInfo( unpack( btn.item ) )
+      if not m.sendmail_item_is_valid( btn.item ) then
+        btn.item = nil
+      else
+        local bag, slot = item_bag_slot( btn.item )
+        texture, count = m.api.GetContainerItemInfo( bag, slot )
+      end
     end
     if not texture then
       btn:SetNormalTexture( nil )
@@ -107,7 +163,9 @@ function Forged_Mailbox.hook.SendMailFrame_Update()
   local taby = (icony + gapy1)
   local scrollHeight = 249 - areay
 
-  m.api.MailHorizontalBarLeft:SetPoint( "TOPLEFT", m.api.SendMailFrame, "BOTTOMLEFT", 2 + 15, 184 + areay - 14 )
+  if m.sendmail_bar_left then
+    m.sendmail_bar_left:SetPoint( "TOPLEFT", m.api.SendMailFrame, "BOTTOMLEFT", 2 + 15, 184 + areay - 14 )
+  end
 
   m.api.SendMailScrollFrame:SetHeight( scrollHeight )
   m.api.SendMailScrollChildFrame:SetHeight( scrollHeight )
@@ -170,9 +228,9 @@ function Forged_Mailbox.hook.ClickSendMailItemButton()
 end
 
 function Forged_Mailbox.hook.GetContainerItemInfo( bag, slot )
-  local ret = pack( m.orig.GetContainerItemInfo( bag, slot ) )
-  ret[ 3 ] = ret[ 3 ] or m.sendmail_attached( bag, slot ) and 1 or nil
-  return unpack( ret )
+  local texture, count, locked, quality, readable, lootable, link = m.orig.GetContainerItemInfo( bag, slot )
+  locked = locked or (m.sendmail_attached( bag, slot ) and 1 or nil)
+  return texture, count, locked, quality, readable, lootable, link
 end
 
 function Forged_Mailbox.hook.PickupContainerItem( bag, slot )
@@ -221,22 +279,32 @@ function Forged_Mailbox.hook.UseContainerItem( bag, slot, onself )
 end
 
 function Forged_Mailbox.hook.SendMailFrame_CanSend()
-  if not m.sendmail_sending and string.len( m.api.SendMailNameEditBox:GetText() ) > 0 and (m.api.SendMailSendMoneyButton:GetChecked() and m.api.MoneyInputFrame_GetCopper( m.api.SendMailMoney ) or 0) + m.api.GetSendMailPrice() * math.max( 1, m.sendmail_num_attachments() ) <= m.api.GetMoney() then
-    MailMailButton:Enable()
+  if not m.sendmail_ensure_loaded() then return end
+
+  local button = get_send_button()
+  if not button or not button.Enable then return end
+
+  if (not m.sendmail_sending)
+      and string.len( m.api.SendMailNameEditBox:GetText() ) > 0
+      and (m.api.SendMailSendMoneyButton:GetChecked() and m.api.MoneyInputFrame_GetCopper( m.api.SendMailMoney ) or 0)
+        + m.api.GetSendMailPrice() * math.max( 1, m.sendmail_num_attachments() ) <= m.api.GetMoney() then
+    button:Enable()
   else
-    MailMailButton:Disable()
+    button:Disable()
   end
 end
 
 function Forged_Mailbox.send_mail_button_onclick()
-  m.api.MailAutoCompleteBox:Hide()
+  if m.api.MailAutoCompleteBox then
+    m.api.MailAutoCompleteBox:Hide()
+  end
 
   m.api.Forged_Mailbox_To = m.api.SendMailNameEditBox:GetText()
   m.api.SendMailNameEditBox:HighlightText()
 
   m.sendmail_state = {
     to = m.api.Forged_Mailbox_To,
-    subject = MailSubjectEditBox:GetText(),
+    subject = (m.api.SendMailSubjectEditBox and m.api.SendMailSubjectEditBox.GetText and m.api.SendMailSubjectEditBox:GetText()) or "",
     body = m.api.SendMailBodyEditBox:GetText(),
     money = m.api.MoneyInputFrame_GetCopper( m.api.SendMailMoney ),
     cod = m.api.SendMailCODButton:GetChecked(),
@@ -250,20 +318,72 @@ function Forged_Mailbox.send_mail_button_onclick()
 end
 
 function Forged_Mailbox.sendmail_load()
+  if m.sendmail_initialized then return end
+  if not (m.api and m.api.SendMailFrame and m.api.SendMailNameEditBox and m.api.SendMailBodyEditBox) then
+    return
+  end
+
   m.api.SendMailFrame:EnableMouse( false )
 
-  m.api.SendMailFrame:CreateTexture( "MailHorizontalBarLeft", "BACKGROUND" )
-  m.api.MailHorizontalBarLeft:SetTexture( "Interface\\ClassTrainerFrame\\UI-ClassTrainer-HorizontalBar" )
-  m.api.MailHorizontalBarLeft:SetWidth( 256 )
-  m.api.MailHorizontalBarLeft:SetHeight( 16 )
-  m.api.MailHorizontalBarLeft:SetTexCoord( 0, 1, 0, .25 )
+  -- Ensure attachment buttons exist (some UIs/lazy-load setups may not have created them yet).
+  for i = 1, ATTACHMENTS_MAX do
+    local name = "MailAttachment" .. i
+    local btn = m.api[ name ]
+    if not btn then
+      btn = m.api.CreateFrame( "Button", name, m.api.SendMailFrame, nil )
+      btn:SetWidth( 37 )
+      btn:SetHeight( 37 )
+      btn:RegisterForClicks( "LeftButtonUp", "RightButtonUp" )
+      btn:RegisterForDrag( "LeftButton" )
+      btn:SetHighlightTexture( "Interface\\Buttons\\ButtonHilight-Square", "ADD" )
+      btn:SetScript( "OnReceiveDrag", m.attachment_button_on_click )
+      btn:SetScript( "OnDragStart", m.attachment_button_on_click )
+      btn:SetScript( "OnClick", function()
+        m.attachment_button_on_click()
+        local onEnter = this:GetScript( "OnEnter" )
+        if onEnter then onEnter() end
+      end )
+      btn:SetScript( "OnEnter", function()
+        m.api.GameTooltip:SetOwner( this, "ANCHOR_RIGHT" )
+        if this.item then
+          local bag, slot = item_bag_slot( this.item )
+          if bag and slot then
+            m.api.GameTooltip:SetBagItem( bag, slot )
+          end
+        else
+          m.api.GameTooltip:SetText( m.api.ATTACHMENT_TEXT or "Attachment", 1.0, 1.0, 1.0 )
+        end
+      end )
+      btn:SetScript( "OnLeave", function() m.api.GameTooltip:Hide() end )
 
-  m.api.SendMailFrame:CreateTexture( "MailHorizontalBarRight", "BACKGROUND" )
-  m.api.MailHorizontalBarRight:SetTexture( "Interface\\ClassTrainerFrame\\UI-ClassTrainer-HorizontalBar" )
-  m.api.MailHorizontalBarRight:SetWidth( 75 )
-  m.api.MailHorizontalBarRight:SetHeight( 16 )
-  m.api.MailHorizontalBarRight:SetTexCoord( 0, .29296875, .25, .5 )
-  m.api.MailHorizontalBarRight:SetPoint( "LEFT", m.api.MailHorizontalBarLeft, "RIGHT" )
+      local count = btn:CreateFontString( name .. "Count", "ARTWORK", "NumberFontNormal" )
+      count:SetJustifyH( "RIGHT" )
+      count:ClearAllPoints()
+      count:SetPoint( "BOTTOMRIGHT", btn, "BOTTOMRIGHT", -5, 2 )
+      count:Hide()
+
+      local bg = btn:CreateTexture( nil, "BACKGROUND" )
+      bg:SetTexture( "Interface\\Buttons\\UI-Slot-Background" )
+      bg:SetWidth( 39 )
+      bg:SetHeight( 39 )
+      bg:SetPoint( "TOPLEFT", btn, "TOPLEFT", -1, 1 )
+      bg:SetTexCoord( 0, 0.640625, 0, 0.640625 )
+    end
+  end
+
+  m.sendmail_bar_left = m.sendmail_bar_left or m.api.SendMailFrame:CreateTexture( nil, "BACKGROUND" )
+  m.sendmail_bar_left:SetTexture( "Interface\\ClassTrainerFrame\\UI-ClassTrainer-HorizontalBar" )
+  m.sendmail_bar_left:SetWidth( 256 )
+  m.sendmail_bar_left:SetHeight( 16 )
+  m.sendmail_bar_left:SetTexCoord( 0, 1, 0, .25 )
+
+  m.sendmail_bar_right = m.sendmail_bar_right or m.api.SendMailFrame:CreateTexture( nil, "BACKGROUND" )
+  m.sendmail_bar_right:SetTexture( "Interface\\ClassTrainerFrame\\UI-ClassTrainer-HorizontalBar" )
+  m.sendmail_bar_right:SetWidth( 75 )
+  m.sendmail_bar_right:SetHeight( 16 )
+  m.sendmail_bar_right:SetTexCoord( 0, .29296875, .25, .5 )
+  m.sendmail_bar_right:ClearAllPoints()
+  m.sendmail_bar_right:SetPoint( "LEFT", m.sendmail_bar_left, "RIGHT" )
 
   m.api.SendMailMoneyText:SetJustifyH( "LEFT" )
   m.api.SendMailMoneyText:SetPoint( "TOPLEFT", 0, 0 )
@@ -283,23 +403,13 @@ function Forged_Mailbox.sendmail_load()
   m.api.SendMailMoneyCopper:SetPoint( "LEFT", m.api.SendMailMoneySilver, "RIGHT", 20, 0 )
   m.api.SendMailSendMoneyButton:SetPoint( "TOPLEFT", m.api.SendMailMoney, "TOPRIGHT", 0, 12 )
 
-  -- hack to avoid automatic subject setting and button disabling from weird blizzard code
-  MailMailButton = m.api.SendMailMailButton
-  m.api.SendMailMailButton = setmetatable( {}, { __index = function() return function() end end } )
+  -- Override send button click to drive multi-mail sending logic.
   m.api.SendMailMailButton_OnClick = m.send_mail_button_onclick
-  MailSubjectEditBox = m.api.SendMailSubjectEditBox
-  m.api.SendMailSubjectEditBox = setmetatable( {}, {
-    __index = function( _, key )
-      return function( _, ... )
-        return MailSubjectEditBox[ key ]( MailSubjectEditBox, unpack( arg ) )
-      end
-    end,
-  } )
 
   m.api.SendMailNameEditBox._SetText = m.api.SendMailNameEditBox.SetText
-  function m.api.SendMailNameEditBox:SetText( ... )
+  function m.api.SendMailNameEditBox:SetText( text )
     if not m.api.Forged_Mailbox_To then
-      return self:_SetText( unpack( arg ) )
+      return self:_SetText( text )
     end
   end
 
@@ -320,7 +430,9 @@ function Forged_Mailbox.sendmail_load()
         m.next_match()
       end
     else
-      MailSubjectEditBox:SetFocus()
+      if m.api.SendMailSubjectEditBox then
+        m.api.SendMailSubjectEditBox:SetFocus()
+      end
     end
   end )
   m.api.SendMailNameEditBox:SetScript( "OnEnterPressed", function()
@@ -328,7 +440,9 @@ function Forged_Mailbox.sendmail_load()
       m.api.MailAutoCompleteBox:Hide()
       this:HighlightText( 0, 0 )
     else
-      MailSubjectEditBox:SetFocus()
+      if m.api.SendMailSubjectEditBox then
+        m.api.SendMailSubjectEditBox:SetFocus()
+      end
     end
   end )
   m.api.SendMailNameEditBox:SetScript( "OnEscapePressed", function()
@@ -379,11 +493,14 @@ function Forged_Mailbox.sendmail_load()
       end )
     end
   end
+
+  m.sendmail_initialized = true
 end
 
 --@param bag number
 --@param slot number
 function Forged_Mailbox.sendmail_attached( bag, slot )
+  if not (m.api and m.api.MailFrame and m.api.MailFrame.IsVisible) then return false end
   if not m.api.MailFrame:IsVisible() then return false end
   for i = 1, ATTACHMENTS_MAX do
     local btn = m.api[ "MailAttachment" .. i ]
@@ -392,8 +509,8 @@ function Forged_Mailbox.sendmail_attached( bag, slot )
     end
   end
   if m.sendmail_state then
-    for _, attachment in m.sendmail_state.attachments do
-      if attachment[ 1 ] == bag and attachment[ 2 ] == slot then
+    for _, attachment in ipairs( m.sendmail_state.attachments or {} ) do
+      if attachment and attachment[ 1 ] == bag and attachment[ 2 ] == slot then
         return true
       end
     end
@@ -403,10 +520,14 @@ end
 function Forged_Mailbox.attachment_button_on_click()
   local attachedItem = this.item
   local cursorItem = m.get_cursor_item()
+  ensure_item_link( cursorItem )
   if m.sendmail_set_attachment( cursorItem, this ) then
     if attachedItem then
       if arg1 == "LeftButton" then m.set_cursor_item( attachedItem ) end
-      m.orig.PickupContainerItem( unpack( attachedItem ) )
+      local bag, slot = item_bag_slot( attachedItem )
+      if bag and slot then
+        m.orig.PickupContainerItem( bag, slot )
+      end
       if arg1 ~= "LeftButton" then m.api.ClearCursor() end -- for the lock changed event
     end
   end
@@ -419,7 +540,7 @@ function Forged_Mailbox.sendmail_remove_attachment( item )
       local btn = m.api[ "MailAttachment" .. i ]
       if btn.item and btn.item[ 1 ] == item[ 1 ] and btn.item[ 2 ] == item[ 2 ] then
         m.api[ "MailAttachment" .. i ].item = nil
-        m.orig.PickupContainerItem( unpack( item ) )
+        m.orig.PickupContainerItem( item[ 1 ], item[ 2 ] )
         m.api.ClearCursor()
         m.api.SendMailFrame_Update()
         return
@@ -445,7 +566,7 @@ function Forged_Mailbox.sendmail_set_attachment( item, slot )
   end
   if slot then
     if not (item or slot.item) then return true end
-    slot.item = item
+    slot.item = ensure_item_link( item )
     m.api.ClearCursor()
     m.api.SendMailFrame_Update()
     return true
@@ -454,10 +575,14 @@ end
 
 ---@param item table
 function Forged_Mailbox.sendmail_pickup_mailable( item )
+  ensure_item_link( item )
   m.api.ClearCursor()
   m.orig.ClickSendMailItemButton()
   m.api.ClearCursor()
-  m.orig.PickupContainerItem( unpack( item ) )
+  local bag, slot = item_bag_slot( item )
+  if bag and slot then
+    m.orig.PickupContainerItem( bag, slot )
+  end
   m.orig.ClickSendMailItemButton()
   local mailable = m.api.GetSendMailItem() and true or false
   m.orig.ClickSendMailItemButton()
@@ -493,13 +618,21 @@ function Forged_Mailbox.sendmail_clear()
   end
   if anyItem then
     m.api.ClearCursor()
-    m.api.PickupContainerItem( unpack( anyItem ) )
+    local bag, slot = item_bag_slot( anyItem )
+    if bag and slot then
+      m.orig.PickupContainerItem( bag, slot )
+    end
     m.api.ClearCursor()
   end
-  MailMailButton:Disable()
+  do
+    local button = get_send_button()
+    if button and button.Disable then button:Disable() end
+  end
   m.api.SendMailNameEditBox:SetText ""
   m.api.SendMailNameEditBox:SetFocus()
-  MailSubjectEditBox:SetText ""
+  if m.api.SendMailSubjectEditBox then
+    m.api.SendMailSubjectEditBox:SetText( "" )
+  end
   m.api.SendMailBodyEditBox:SetText ""
   m.api.MoneyInputFrame_ResetMoney( m.api.SendMailMoney )
   m.api.SendMailRadioButton_OnClick( 1 )
@@ -510,10 +643,20 @@ end
 function Forged_Mailbox.sendmail_send()
   local item = table.remove( m.sendmail_state.attachments, 1 )
   if item then
+    ensure_item_link( item )
+    if not m.sendmail_item_is_valid( item ) then
+      m.sendmail_sending = false
+      m.sendmail_state = nil
+      m.api.ClearCursor()
+      m.orig.ClickSendMailItemButton()
+      m.api.ClearCursor()
+      m.api.DEFAULT_CHAT_FRAME:AddMessage( "|cffabd473Forged_Mailbox|r: Attachment moved/changed; sending cancelled.", 1, 0, 0 )
+      return
+    end
     m.api.ClearCursor()
     m.orig.ClickSendMailItemButton()
     m.api.ClearCursor()
-    m.orig.PickupContainerItem( unpack( item ) )
+    m.orig.PickupContainerItem( item[ 1 ], item[ 2 ] )
     m.orig.ClickSendMailItemButton()
 
     if not m.api.GetSendMailItem() then
@@ -563,3 +706,5 @@ function Forged_Mailbox.sendmail_send()
     m.sendmail_sending = false
   end
 end
+
+-- Mark send-mail UI as initialized once load finishes successfully.
