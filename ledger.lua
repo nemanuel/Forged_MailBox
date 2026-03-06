@@ -692,9 +692,9 @@ function Forged_Mailbox.ledger.populate( log_type, index )
   m.api.Forged_MailboxLedgerTitleText:SetText( L[ "Ledger" ] )
   if m.api.Forged_MailboxLedgerStatusText then
     if m.format_money then
-      m.api.Forged_MailboxLedgerStatusText:SetText( "Total " .. m.format_money( total_sales ) )
+      m.api.Forged_MailboxLedgerStatusText:SetText( "Total: " .. m.format_money( total_sales ) )
     else
-      m.api.Forged_MailboxLedgerStatusText:SetText( "Total " .. m.ledger.format_money_icons( total_sales ) )
+      m.api.Forged_MailboxLedgerStatusText:SetText( "Total: " .. m.ledger.format_money_icons( total_sales ) )
     end
     m.api.Forged_MailboxLedgerStatusText:Show()
   end

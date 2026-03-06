@@ -57,32 +57,74 @@ function Forged_Mailbox.inbox_confirm_open_auction_all()
     end
 end
 
-local function is_auction_mail(sender, subject)
+local function is_sold_auction_mail(index, sender, subject, money, cod, has_item)
     if not m.api then
         return false
     end
 
-    -- Only treat SUCCESSFUL auction sales as "auction mail" for the Open Auction Mail button.
-    -- Do NOT match by sender ("Auction House"), because that would include outbid/won/expired/etc.
+    -- Backward-compat: older callers passed (sender, subject).
+    if type(index) ~= "number" then
+        has_item = nil
+        cod = nil
+        money = nil
+        subject = sender
+        sender = index
+        index = nil
+    end
+
+    -- If we have an index, pull authoritative header info for sold-auction detection.
+    if type(index) == "number" and m.api.GetInboxHeaderInfo then
+        local _, _, hdr_sender, hdr_subject, hdr_money, hdr_cod, _, hdr_has_item = m.api.GetInboxHeaderInfo(index)
+        sender = sender or hdr_sender
+        subject = subject or hdr_subject
+        money = money or hdr_money
+        cod = cod or hdr_cod
+        if has_item == nil then
+            has_item = hdr_has_item
+        end
+    end
+
+    -- Primary reliable heuristic for SOLD auctions:
+    -- - Sender is the Auction House
+    -- - Money > 0
+    -- - COD == 0
+    -- - No item attached
+    local senderLower = type(sender) == "string" and string.lower(sender) or ""
+    local isAuctionHouseSender = senderLower ~= "" and string.find(senderLower, "auction house", 1, true) ~= nil
+    if isAuctionHouseSender
+        and type(money) == "number" and money > 0
+        and (type(cod) ~= "number" or cod == 0)
+        and (has_item == nil or has_item == false) then
+        return true
+    end
+
+    -- Secondary (optional) exact subject match if the client provides a specific format string.
     if type(subject) ~= "string" or subject == "" then
         return false
     end
 
-    local pattern = m.api.AUCTION_SOLD_MAIL_SUBJECT
-    if type(pattern) ~= "string" or pattern == "" then
-        return false
+    local formatString = m.api.AUCTION_SOLD_MAIL_SUBJECT
+    if type(formatString) == "string" and formatString ~= "" then
+        -- Guard: if the format is essentially just "%s" (or similarly too short), it would match everything.
+        local stripped = string.gsub(formatString, "%%s", "")
+        stripped = string.gsub(stripped, "%s+", "")
+        if string.len(stripped) >= 4 then
+            local token = string.char(1)
+            local tmp = string.gsub(formatString, "%%s", token)
+            tmp = string.gsub(tmp, "([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+            tmp = string.gsub(tmp, token, "(.+)")
+            local luaPattern = "^" .. tmp .. "$"
+            if string.find(subject, luaPattern) ~= nil then
+                return true
+            end
+        end
     end
 
-    local stem = string.gsub(pattern, "%%s", "")
-    if stem == "" then
-        return false
-    end
-
-    return string.find(subject, stem, 1, true) ~= nil
+    return false
 end
 
-function Forged_Mailbox.inbox_is_auction_mail(sender, subject)
-    return is_auction_mail(sender, subject)
+function Forged_Mailbox.inbox_is_auction_mail(index, sender, subject, money, cod, has_item)
+    return is_sold_auction_mail(index, sender, subject, money, cod, has_item)
 end
 
 function Forged_Mailbox.MAIL_INBOX_UPDATE()
@@ -107,18 +149,27 @@ function Forged_Mailbox.inbox_load()
     m.api.InboxFrame:EnableMouse(false)
     local btn = m.api.CreateFrame("Button", "Forged_MailboxOpenMailButton", m.api.InboxFrame, "UIPanelButtonTemplate")
     btn:ClearAllPoints()
-    btn:SetPoint("TOP", m.api.InboxFrame, "TOP", -42, -46)
-    btn:SetText("Open Mail")
-    btn:SetWidth(86)
+    btn:SetPoint("TOP", m.api.InboxFrame, "TOP", -26, -42)
+    btn:SetText("All Mail")
+    btn:SetWidth(94)
     btn:SetHeight(25)
     btn:SetScript("OnClick", m.inbox_confirm_open_all)
+
+    local label = m.api.Forged_MailboxOpenLabel
+    if not label then
+        label = m.api.InboxFrame:CreateFontString("Forged_MailboxOpenLabel", "ARTWORK", "GameFontNormal")
+        m.api.Forged_MailboxOpenLabel = label
+    end
+    label:ClearAllPoints()
+    label:SetPoint("RIGHT", btn, "LEFT", -6, 0)
+    label:SetText("Open:")
 
     local btn_auction = m.api.CreateFrame("Button", "Forged_MailboxOpenAuctionMailButton", m.api.InboxFrame,
         "UIPanelButtonTemplate")
     btn_auction:ClearAllPoints()
     btn_auction:SetPoint("LEFT", btn, "RIGHT", 4, 0)
-    btn_auction:SetText("Open Sold Auction Mail")
-    btn_auction:SetWidth(136)
+    btn_auction:SetText("All Auctions")
+    btn_auction:SetWidth(94)
     btn_auction:SetHeight(25)
     btn_auction:SetScript("OnClick", m.inbox_confirm_open_auction_all)
 

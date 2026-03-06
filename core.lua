@@ -204,12 +204,12 @@ function Forged_Mailbox.on_update()
   if m.inbox_update then
     m.debug( "on_update: inbox_update" )
     m.inbox_update = false
-    local _, _, sender, subject, _, COD, _, _, _, _, _, _, isGM = m.api.GetInboxHeaderInfo( m.inbox_index )
+    local _, _, sender, subject, money, COD, _, has_item, _, _, _, _, isGM = m.api.GetInboxHeaderInfo( m.inbox_index )
     if m.inbox_index > m.api.GetInboxNumItems() then
       m.inbox_abort()
     elseif m.inbox_open_filter == "auction"
         and m.inbox_is_auction_mail
-        and (not m.inbox_is_auction_mail( sender, subject )) then
+        and (not m.inbox_is_auction_mail( m.inbox_index, sender, subject, money, COD, has_item )) then
       m.inbox_index = m.inbox_index + 1
       m.inbox_update = true
     elseif m.inbox_skip or COD > 0 or isGM then
