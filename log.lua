@@ -63,6 +63,10 @@ function Forged_Mailbox.log.load()
 
   m.api.Forged_MailboxLogStatusText:SetTextColor( 1, 1, 1, 1 )
   m.api.Forged_MailboxLogStatusText:SetFont( "Fonts\\FRIZQT__.TTF", 10 )
+
+  if m.skin_uipanel_scrollbar and m.api and m.api.Forged_MailboxLogScrollFrameScrollBar then
+    m.skin_uipanel_scrollbar( m.api.Forged_MailboxLogScrollFrameScrollBar )
+  end
   m.api.Forged_MailboxLogScrollFrameScrollBar:SetValueStep( 1 )
   m.api.Forged_MailboxLogScrollFrameScrollBar:SetScript( "OnValueChanged", m.log.on_scroll_value_changed )
 
@@ -380,7 +384,7 @@ function Forged_Mailbox.log.populate( log_type, index )
     index = 0
   end
 
-  m.api.Forged_MailboxLogTitleText:SetText( string.format( "%s %s", L[ log_type ], L[ "Log" ] ) )
+  m.api.Forged_MailboxLogTitleText:SetText( string.format( "%s [%s]", L[ "Log" ], L[ log_type ] ) )
   m.api.Forged_MailboxLogStatusText:SetText( string.format( "Showing %d-%d of %d", (index == 0 and log_count == 0) and index or index + 1,
   math.min( log_count, index + 10 ), log_count ) )
 

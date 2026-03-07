@@ -3,8 +3,8 @@ local getn = table.getn ---@diagnostic disable-line: deprecated
 
 m.ledger = m.ledger or {}
 
-local LEDGER_ROW_ICON = "Interface/Icons/INV_Misc_Note_06"
-local LEDGER_SUBROW_INDENT = "  "
+local LEDGER_ROW_ICON = "Interface\\Icons\\INV_Misc_Book_09"
+local LEDGER_SUBITEM_ROW_ICON = "Interface/Icons/INV_Misc_Note_03"
 local LEDGER_ARROW_TEXTURE = "Interface\\Addons\\Forged_Mailbox\\assets\\DownArrow.tga"
 
 local function escape_lua_pattern( s )
@@ -365,6 +365,10 @@ function Forged_Mailbox.ledger.load()
     m.api.Forged_MailboxLedgerStatusText:SetJustifyH( "LEFT" )
     m.api.Forged_MailboxLedgerStatusText:SetFont( "Fonts\\FRIZQT__.TTF", 10 )
     m.api.Forged_MailboxLedgerStatusText:Show()
+  end
+
+  if m.skin_uipanel_scrollbar and m.api and m.api.Forged_MailboxLedgerScrollFrameScrollBar then
+    m.skin_uipanel_scrollbar( m.api.Forged_MailboxLedgerScrollFrameScrollBar )
   end
   m.api.Forged_MailboxLedgerScrollFrameScrollBar:SetValueStep( 1 )
   m.api.Forged_MailboxLedgerScrollFrameScrollBar:SetScript( "OnValueChanged", m.ledger.on_scroll_value_changed )
@@ -783,7 +787,7 @@ function Forged_Mailbox.ledger.populate( log_type, index )
 
       local sub_subject = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Subject" ]
       if sub_subject then
-        sub_subject:SetText( LEDGER_SUBROW_INDENT .. details )
+        sub_subject:SetText( details )
       end
 
       local sub_index = m.api[ "Forged_MailboxLedgerSubItem" .. i .. "Index" ]

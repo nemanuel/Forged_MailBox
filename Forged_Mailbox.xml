@@ -914,14 +914,14 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="23" y="-98" />
+              <AbsDimension x="21" y="-97" />
             </Offset>
           </Anchor>
         </Anchors>
       </ScrollFrame>
       <Frame name="Forged_MailboxLogEntriesFrame" enableMouse="true">
         <Size>
-          <AbsDimension x="301" y="255" />
+          <AbsDimension x="293" y="255" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
@@ -1385,14 +1385,14 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="23" y="-98" />
+              <AbsDimension x="21" y="-97" />
             </Offset>
           </Anchor>
         </Anchors>
       </ScrollFrame>
       <Frame name="Forged_MailboxLedgerEntriesFrame" enableMouse="true">
         <Size>
-          <AbsDimension x="301" y="255" />
+          <AbsDimension x="293" y="255" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
