@@ -1,9 +1,9 @@
 ﻿
 ## Interface: 11200
 ## Title: |cfff07d30Forged|r Mailbox
-## Notes: Mailbox enhancement
+## Notes: Improved mail management and adds a ledger to keep track of your daily sales
 ## Author: Chromag
-## Version: 0.0.1
+## Version: 1.0.0
 ## Website: https://forgedworlds.com
 ## Email: chromag@forgedworlds.com
 ## SavedVariables: ForgedMailboxDB

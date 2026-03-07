@@ -266,7 +266,6 @@ end
 ---@param log_type LogType
 ---@param state table
 function Forged_Mailbox.log.add( log_type, state )
-  -- Always collect log data; the /tm log toggle only controls tab visibility.
   if m.ensure_savedvars then
     m.ensure_savedvars()
   end

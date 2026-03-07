@@ -149,7 +149,7 @@ function Forged_Mailbox.inbox_load()
     m.api.InboxFrame:EnableMouse(false)
     local btn = m.api.CreateFrame("Button", "Forged_MailboxOpenMailButton", m.api.InboxFrame, "UIPanelButtonTemplate")
     btn:ClearAllPoints()
-    btn:SetPoint("TOP", m.api.InboxFrame, "TOP", -27, -42)
+    btn:SetPoint("TOP", m.api.InboxFrame, "TOP", 0, -42)
     btn:SetText("All Mail")
     btn:SetWidth(94)
     btn:SetHeight(25)
@@ -168,7 +168,7 @@ function Forged_Mailbox.inbox_load()
         "UIPanelButtonTemplate")
     btn_auction:ClearAllPoints()
     btn_auction:SetPoint("LEFT", btn, "RIGHT", 4, 0)
-    btn_auction:SetText("Auctions")
+    btn_auction:SetText("All Auctions")
     btn_auction:SetWidth(94)
     btn_auction:SetHeight(25)
     btn_auction:SetScript("OnClick", m.inbox_confirm_open_auction_all)
@@ -181,6 +181,8 @@ end
 
 function Forged_Mailbox.inbox_open_all()
     m.inbox_open_filter = nil
+    m.inbox_openall_total_items = 0
+    m.inbox_openall_total = 0
     m.inbox_opening = true
     m.inbox_update_lock()
     m.inbox_skip = false
@@ -190,6 +192,7 @@ end
 
 function Forged_Mailbox.inbox_open_auction_all()
     m.inbox_open_filter = "auction"
+    m.inbox_auction_total = 0
     m.inbox_opening = true
     m.inbox_update_lock()
     m.inbox_skip = false
@@ -212,6 +215,27 @@ function Forged_Mailbox.inbox_open(i, manual)
     local package_icon, _, sender, subject, money, cod, days_left, has_item, read, returned, _, _, gm = m.api
                                                                                                             .GetInboxHeaderInfo(
         i)
+
+    -- Accumulate copper totals for the "open all sold auction mail" flow.
+    if (not manual)
+        and m.inbox_opening
+        and m.inbox_open_filter == "auction"
+        and type(money) == "number"
+        and money > 0 then
+        m.inbox_auction_total = (tonumber(m.inbox_auction_total) or 0) + money
+    end
+
+    -- Accumulate totals for the "open all mail" flow.
+    if (not manual)
+        and m.inbox_opening
+        and m.inbox_open_filter == nil then
+        if has_item then
+            m.inbox_openall_total_items = (tonumber(m.inbox_openall_total_items) or 0) + 1
+        end
+        if type(money) == "number" and money > 0 then
+            m.inbox_openall_total = (tonumber(m.inbox_openall_total) or 0) + money
+        end
+    end
 
     -- Track & ledger money immediately for open-all (money-only mails like AH sales).
     if (not manual) and money and money > 0 then

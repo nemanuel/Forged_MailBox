@@ -22,7 +22,19 @@ It also streamlines item trading with a smart multi-send workflow that automatic
 ## Installation
 
 1. Copy the addon folder to `Interface/AddOns/Forged_Mailbox`
-2. Restart the client (recommended if you changed the `.toc`).«
+2. Restart the client (recommended if you changed the `.toc`).
+
+## Screenshots
+
+![Screenshot 1](screenshot-1.png)
+
+![Screenshot 2](screenshot-2.png)
+
+![Screenshot 3](screenshot-3.png)
+
+![Screenshot 4](screenshot-4.png)
+
+![Screenshot 5](screenshot-5.png)
 
 ## Ledger
 
@@ -61,6 +73,7 @@ Open a mailbox and go to the **Send Mail** tab.
 ## Other QoL
 
 - **Open All** button to loot your inbox faster
+- Prints a short chat summary when an automated open-all run finishes
 - **Autocomplete** for previously used recipient names
 - Returned-mail indicator arrows
 - Optional **Log** tab (toggleable)
@@ -79,8 +92,6 @@ Supported arguments:
 - `/fmb clear received` — clear Received log
 - `/fmb clear names` — clear saved autocomplete recipient names
 - `/fmb debug` — toggle debug logging
-
-Note: The in-game help text currently prints commands with `/tm ...`, but the actual slash command is `/fmb ...`.
 
 ## SavedVariables
 
@@ -102,7 +113,3 @@ Declared in [Forged_Mailbox.toc](Forged_Mailbox.toc):
 - `log.lua` — Log tab
 - `ledger.lua` — Ledger tab
 - `Forged_Mailbox.xml` — UI frames
-
-## License
-
-No license file is included in this repository. If you intend to redistribute/modify, add a license that matches your needs.

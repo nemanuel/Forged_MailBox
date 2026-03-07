@@ -334,7 +334,47 @@ function Forged_Mailbox.on_update()
         m.inbox_update = false
         local _, _, sender, subject, money, COD, _, has_item, _, _, _, _, isGM = m.api.GetInboxHeaderInfo(m.inbox_index)
         if m.inbox_index > m.api.GetInboxNumItems() then
+            local was_auction = m.inbox_open_filter == "auction"
+            local total = tonumber(m.inbox_auction_total) or 0
+            local was_open_all = m.inbox_open_filter == nil
+            local all_items = tonumber(m.inbox_openall_total_items) or 0
+            local all_total = tonumber(m.inbox_openall_total) or 0
             m.inbox_abort()
+            if was_auction and m.api and m.api.DEFAULT_CHAT_FRAME and m.api.DEFAULT_CHAT_FRAME.AddMessage then
+                local gold = math.floor(total / 10000)
+                local silver = math.floor((total - gold * 10000) / 100)
+                local copper = total - (gold * 10000) - (silver * 100)
+                m.api.DEFAULT_CHAT_FRAME:AddMessage("Opened all auction mails.", 1, 1, 0)
+                local money_parts = {}
+                if gold > 0 then table.insert(money_parts, string.format("%d Gold", gold)) end
+                if silver > 0 then table.insert(money_parts, string.format("%d Silver", silver)) end
+                if copper > 0 or (table.getn(money_parts) == 0) then table.insert(money_parts, string.format("%d Copper", copper)) end
+                m.api.DEFAULT_CHAT_FRAME:AddMessage(
+                    "Received " .. table.concat(money_parts, ", ") .. ".",
+                    1,
+                    1,
+                    0
+                )
+            end
+            if was_open_all and m.api and m.api.DEFAULT_CHAT_FRAME and m.api.DEFAULT_CHAT_FRAME.AddMessage then
+                local gold = math.floor(all_total / 10000)
+                local silver = math.floor((all_total - gold * 10000) / 100)
+                local copper = all_total - (gold * 10000) - (silver * 100)
+                m.api.DEFAULT_CHAT_FRAME:AddMessage("Opened all mail.", 1, 1, 0)
+                local money_parts = {}
+                if gold > 0 then table.insert(money_parts, string.format("%d Gold", gold)) end
+                if silver > 0 then table.insert(money_parts, string.format("%d Silver", silver)) end
+                if copper > 0 or (table.getn(money_parts) == 0) then table.insert(money_parts, string.format("%d Copper", copper)) end
+                m.api.DEFAULT_CHAT_FRAME:AddMessage(
+                    "Received " .. table.concat(money_parts, ", ") .. string.format(" and %d items.", all_items),
+                    1,
+                    1,
+                    0
+                )
+            end
+            m.inbox_auction_total = nil
+            m.inbox_openall_total_items = nil
+            m.inbox_openall_total = nil
         elseif m.inbox_open_filter == "auction" and m.inbox_is_auction_mail and
             (not m.inbox_is_auction_mail(m.inbox_index, sender, subject, money, COD, has_item)) then
             m.inbox_index = m.inbox_index + 1
