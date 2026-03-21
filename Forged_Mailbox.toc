@@ -3,7 +3,7 @@
 ## Title: |cfff07d30Forged|r Mailbox
 ## Notes: Improved mail management and adds a ledger to keep track of your daily sales
 ## Author: Chromag
-## Version: 1.0.0
+## Version: 1.0.1
 ## Website: https://forgedworlds.com
 ## Email: chromag@forgedworlds.com
 ## SavedVariables: ForgedMailboxDB

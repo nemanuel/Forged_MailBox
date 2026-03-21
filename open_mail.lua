@@ -28,7 +28,7 @@ local function ensure_open_confirm_dialogs()
 
     if not dialogs.FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL then
         dialogs.FORGED_MAILBOX_OPEN_ALL_AUCTION_MAIL = {
-            text = "Are you sure you want to open all sold auction mail?",
+            text = "Are you sure you want to open all auction mail?",
             button1 = m.api.YES or "Yes",
             button2 = m.api.NO or "No",
             timeout = 0,
@@ -123,6 +123,20 @@ local function is_sold_auction_mail(index, sender, subject, money, cod, has_item
     return false
 end
 
+local function make_inbox_mail_key(index, sender, subject, money, cod, has_item, read)
+    local inbox_count = (m.api and m.api.GetInboxNumItems and m.api.GetInboxNumItems()) or 0
+    return table.concat({
+        tostring(index or ""),
+        tostring(inbox_count),
+        tostring(sender or ""),
+        tostring(subject or ""),
+        tostring(money or 0),
+        tostring(cod or 0),
+        tostring(has_item or false),
+        tostring(read or false)
+    }, "\031")
+end
+
 function Forged_Mailbox.inbox_is_auction_mail(index, sender, subject, money, cod, has_item)
     return is_sold_auction_mail(index, sender, subject, money, cod, has_item)
 end
@@ -183,6 +197,7 @@ function Forged_Mailbox.inbox_open_all()
     m.inbox_open_filter = nil
     m.inbox_openall_total_items = 0
     m.inbox_openall_total = 0
+    m.inbox_last_auto_open_key = nil
     m.inbox_opening = true
     m.inbox_update_lock()
     m.inbox_skip = false
@@ -193,6 +208,7 @@ end
 function Forged_Mailbox.inbox_open_auction_all()
     m.inbox_open_filter = "auction"
     m.inbox_auction_total = 0
+    m.inbox_last_auto_open_key = nil
     m.inbox_opening = true
     m.inbox_update_lock()
     m.inbox_skip = false
@@ -203,6 +219,7 @@ end
 function Forged_Mailbox.inbox_abort()
     m.inbox_opening = false
     m.inbox_open_filter = nil
+    m.inbox_last_auto_open_key = nil
     m.inbox_update_lock()
     m.inbox_update = false
 end
@@ -215,10 +232,15 @@ function Forged_Mailbox.inbox_open(i, manual)
     local package_icon, _, sender, subject, money, cod, days_left, has_item, read, returned, _, _, gm = m.api
                                                                                                             .GetInboxHeaderInfo(
         i)
+    local auto_open_key = make_inbox_mail_key(i, sender, subject, money, cod, has_item, read)
+    local is_duplicate_auto_open = (not manual)
+        and m.inbox_opening
+        and m.inbox_last_auto_open_key == auto_open_key
 
     -- Accumulate copper totals for the "open all sold auction mail" flow.
     if (not manual)
         and m.inbox_opening
+        and (not is_duplicate_auto_open)
         and m.inbox_open_filter == "auction"
         and type(money) == "number"
         and money > 0 then
@@ -228,6 +250,7 @@ function Forged_Mailbox.inbox_open(i, manual)
     -- Accumulate totals for the "open all mail" flow.
     if (not manual)
         and m.inbox_opening
+        and (not is_duplicate_auto_open)
         and m.inbox_open_filter == nil then
         if has_item then
             m.inbox_openall_total_items = (tonumber(m.inbox_openall_total_items) or 0) + 1
@@ -238,7 +261,7 @@ function Forged_Mailbox.inbox_open(i, manual)
     end
 
     -- Track & ledger money immediately for open-all (money-only mails like AH sales).
-    if (not manual) and money and money > 0 then
+    if (not manual) and (not is_duplicate_auto_open) and money and money > 0 then
         local entry = {
             from = sender,
             subject = subject,
@@ -256,6 +279,10 @@ function Forged_Mailbox.inbox_open(i, manual)
         if m.ledger and m.ledger.add then
             m.ledger.add("Received", entry)
         end
+    end
+
+    if (not manual) and m.inbox_opening then
+        m.inbox_last_auto_open_key = auto_open_key
     end
 
     if has_item then

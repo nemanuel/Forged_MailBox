@@ -361,12 +361,24 @@ function Forged_Mailbox.on_update()
                 local silver = math.floor((all_total - gold * 10000) / 100)
                 local copper = all_total - (gold * 10000) - (silver * 100)
                 m.api.DEFAULT_CHAT_FRAME:AddMessage("Opened all mail.", 1, 1, 0)
-                local money_parts = {}
-                if gold > 0 then table.insert(money_parts, string.format("%d Gold", gold)) end
-                if silver > 0 then table.insert(money_parts, string.format("%d Silver", silver)) end
-                if copper > 0 or (table.getn(money_parts) == 0) then table.insert(money_parts, string.format("%d Copper", copper)) end
+                local received_parts = {}
+                if all_total > 0 then
+                    local money_parts = {}
+                    if gold > 0 then table.insert(money_parts, string.format("%d Gold", gold)) end
+                    if silver > 0 then table.insert(money_parts, string.format("%d Silver", silver)) end
+                    if copper > 0 or (table.getn(money_parts) == 0) then
+                        table.insert(money_parts, string.format("%d Copper", copper))
+                    end
+                    table.insert(received_parts, table.concat(money_parts, ", "))
+                end
+                if all_items > 0 then
+                    table.insert(received_parts, string.format("%d items", all_items))
+                end
+                if table.getn(received_parts) == 0 then
+                    table.insert(received_parts, "nothing")
+                end
                 m.api.DEFAULT_CHAT_FRAME:AddMessage(
-                    "Received " .. table.concat(money_parts, ", ") .. string.format(" and %d items.", all_items),
+                    "Received " .. table.concat(received_parts, " and ") .. ".",
                     1,
                     1,
                     0
